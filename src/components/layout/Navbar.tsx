@@ -11,7 +11,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useAuth } from '@/contexts/AuthContext';
-import { Bot, CreditCard, LogOut, Settings, User } from 'lucide-react';
+import { Bot, CreditCard, LogOut, Settings, User, Sparkles } from 'lucide-react';
 
 export const Navbar: React.FC = () => {
   const { user, profile, credits, signOut } = useAuth();
@@ -33,6 +33,31 @@ export const Navbar: React.FC = () => {
               Pulse AI
             </span>
           </Link>
+
+          {/* Navigation Links - Center */}
+          <div className="hidden md:flex items-center space-x-6">
+            <Link 
+              to="/features" 
+              className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors flex items-center gap-2"
+            >
+              <Sparkles className="h-4 w-4" />
+              Features
+            </Link>
+            <Link 
+              to="/plans" 
+              className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors"
+            >
+              Pricing
+            </Link>
+            {user && (
+              <Link 
+                to="/dashboard" 
+                className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors"
+              >
+                Dashboard
+              </Link>
+            )}
+          </div>
 
           {/* Right side */}
           <div className="flex items-center space-x-4">
@@ -70,6 +95,10 @@ export const Navbar: React.FC = () => {
                       </div>
                     </DropdownMenuLabel>
                     <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => navigate('/features')}>  
+                      <Sparkles className="mr-2 h-4 w-4" />
+                      <span>Features</span>
+                    </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => navigate('/dashboard')}>
                       <User className="mr-2 h-4 w-4" />
                       <span>Dashboard</span>

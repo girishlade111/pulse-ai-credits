@@ -94,15 +94,23 @@
 @layer components {
   /* Hero button variants */
   .btn-hero {
-    @apply bg-gradient-to-r from-primary to-primary-glow text-primary-foreground;
-    @apply shadow-[var(--shadow-primary)] transition-[var(--transition-smooth)];
-    @apply hover:shadow-[var(--shadow-glow)] hover:scale-105;
+    background: linear-gradient(to right, hsl(var(--primary)), hsl(var(--primary-glow)));
+    color: hsl(var(--primary-foreground));
+    box-shadow: var(--shadow-primary);
+    transition: var(--transition-smooth);
+  }
+  
+  .btn-hero:hover {
+    box-shadow: var(--shadow-glow);
+    transform: scale(1.05);
   }
   
   /* Glassmorphism cards */
   .card-glass {
-    @apply bg-card/80 backdrop-blur-xl border border-border/50;
-    @apply shadow-[var(--shadow-card)];
+    background: hsl(var(--card) / 0.8);
+    backdrop-filter: blur(12px);
+    border: 1px solid hsl(var(--border) / 0.5);
+    box-shadow: var(--shadow-card);
   }
   
   /* Gradient backgrounds */
@@ -116,8 +124,12 @@
   
   /* Credit badge styles */
   .credit-badge {
-    @apply bg-gradient-to-r from-primary/20 to-primary-glow/20;
-    @apply border border-primary/30 text-primary;
-    @apply px-3 py-1 rounded-full text-sm font-medium;
+    background: linear-gradient(to right, hsl(var(--primary) / 0.2), hsl(var(--primary-glow) / 0.2));
+    border: 1px solid hsl(var(--primary) / 0.3);
+    color: hsl(var(--primary));
+    padding: 0.25rem 0.75rem;
+    border-radius: 9999px;
+    font-size: 0.875rem;
+    font-weight: 500;
   }
 }
