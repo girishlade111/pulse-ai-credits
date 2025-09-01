@@ -153,7 +153,7 @@ const Index = () => {
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button size="lg" className="btn-hero" onClick={() => navigate('/auth')}>
-                Start Free with 20 Credits
+                Start Free with 10 Credits
               </Button>
               <Button size="lg" variant="outline" onClick={() => navigate('/plans')}>
                 View Pricing Plans

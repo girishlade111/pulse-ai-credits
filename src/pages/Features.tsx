@@ -350,22 +350,22 @@ const Features: React.FC = () => {
             Experience the Future of AI-Powered Solutions
           </h3>
           <p className="text-muted-foreground mb-6 max-w-2xl mx-auto">
-            Begin your journey with our generous free plan offering 20 credits to explore all features. 
+            Begin your journey with our free plan offering 10 trial credits to explore all features. 
             Choose the perfect tool for each task - from lightning-fast queries to comprehensive research datasets. 
-            Scale your usage with flexible credit top-ups and premium plans designed for power users.
+            Upgrade to paid plans for bonus credits, monthly resets, and exclusive top-up discounts designed for power users.
           </p>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-3xl mx-auto">
             <div className="p-4 bg-card/50 rounded-lg border border-border/30">
               <h4 className="font-semibold text-foreground mb-2">Free to Start</h4>
-              <p className="text-sm text-muted-foreground">20 credits included - no setup required</p>
+              <p className="text-sm text-muted-foreground">10 trial credits included - no setup required</p>
             </div>
             <div className="p-4 bg-card/50 rounded-lg border border-border/30">
-              <h4 className="font-semibold text-foreground mb-2">Flexible Usage</h4>
-              <p className="text-sm text-muted-foreground">Pay only for what you use with our credit system</p>
+              <h4 className="font-semibold text-foreground mb-2">Bonus Credits</h4>
+              <p className="text-sm text-muted-foreground">Paid plans include 100% bonus credits monthly</p>
             </div>
             <div className="p-4 bg-card/50 rounded-lg border border-border/30">
-              <h4 className="font-semibold text-foreground mb-2">Instant Access</h4>
-              <p className="text-sm text-muted-foreground">Start using AI tools immediately after signup</p>
+              <h4 className="font-semibold text-foreground mb-2">Top-up Discounts</h4>
+              <p className="text-sm text-muted-foreground">Pro gets 10% off, Business gets 20% off top-ups</p>
             </div>
           </div>
         </div>

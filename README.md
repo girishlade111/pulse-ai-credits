@@ -42,15 +42,54 @@ Pulse AI Credits is a modern SaaS platform that provides access to 7 specialized
 
 ## 💰 Pricing Plans
 
-| Plan | Credits | Price (INR) | Discount | Features |
-|------|---------|-------------|----------|----------|
-| **Free** | 20 | ₹0 | - | Perfect for trying out all features |
-| **Starter** | 30 | ₹499 | - | Great for regular users |
-| **Pro** | 60 | ₹999 | 10% | Best value for power users |
-| **Business** | 200 | ₹3,000 | 20% | Enterprise-grade usage |
+### 🎁 Free Plan
+| Feature | Details |
+|---------|----------|
+| **Price** | ₹0 / month |
+| **Credits** | 10 (one-time only, no monthly reset) |
+| **Top-ups** | ❌ Not available |
+| **Usage** | Trial use only |
+
+### 💳 Paid Plans (Monthly & Annual Options)
+
+#### Monthly Plans
+| Plan | Base Credits | Bonus Credits | Total | Price (INR) | Top-up Discount |
+|------|-------------|---------------|-------|-------------|------------------|
+| **Starter** | 30 | +30 | 60 | ₹499/month | None (full price) |
+| **Pro** | 60 | +60 | 120 | ₹999/month | 10% OFF |
+| **Business** | 200 | +200 | 400 | ₹3,000/month | 20% OFF |
+
+#### Annual Plans (Save up to 16.67%)
+| Plan | Base Credits | Bonus Credits | Total | Annual Price | Monthly Equivalent | You Save |
+|------|-------------|---------------|-------|--------------|-------------------|----------|
+| **Starter** | 30 | +30 | 60 | ₹5,499/year | ~₹458/month | 8.17% (₹489) |
+| **Pro** | 60 | +60 | 120 | ₹9,999/year | ~₹833/month | 16.59% (₹1,989) |
+| **Business** | 200 | +200 | 400 | ₹29,999/year | ~₹2,500/month | 16.67% (₹6,001) |
+
+### 🔋 Top-Up Pricing (Available only for Paid Users)
+
+| Credits | Starter Price | Pro Price (10% OFF) | Business Price (20% OFF) |
+|---------|---------------|---------------------|-------------------------|
+| **10 Credits** | ₹149 | ₹134 | ₹119 |
+| **20 Credits** | ₹249 | ₹224 | ₹199 |
+| **30 Credits** | ₹349 | ₹314 | ₹279 |
+| **50 Credits** | ₹499 | ₹449 | ₹399 |
+
+### 📌 Key Rules
+1. **Free users cannot purchase credits** ❌
+2. **Paid plan required** before buying any top-ups ✅
+3. **Starter users** buy credits at full price
+4. **Pro users** get 10% discount on top-ups
+5. **Business users** get 20% discount on top-ups
+6. **Credits consumed per task** (1-40 depending on complexity)
+7. **Annual plans** offer significant savings (8.17% - 16.67%)
+8. **Billing flexibility** - Switch between monthly and annual at any time
 
 ### 🔄 Additional Features
-- **Credit Top-ups** - Flexible credit purchases for existing plans
+- **Monthly/Annual Billing** - Choose the billing cycle that works for you
+- **Annual Savings** - Save up to 16.67% with annual subscriptions
+- **Monthly Credit Reset** - Paid plans get fresh credits every month
+- **Bonus Credits** - All paid plans include 100% bonus credits
 - **Stripe Integration** - Secure payment processing with INR support
 - **Real-time Tracking** - Monitor credit usage and transaction history
 - **User Roles** - Free and Paid user categories with appropriate permissions

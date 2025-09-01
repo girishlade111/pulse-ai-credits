@@ -187,7 +187,7 @@ const Auth: React.FC = () => {
           </Tabs>
           
           <div className="mt-6 text-center text-sm text-muted-foreground">
-            Get started with 20 free credits • No credit card required
+            Get started with 10 free credits • No credit card required
           </div>
         </CardContent>
       </Card>

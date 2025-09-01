@@ -85,6 +85,7 @@ export type Database = {
           price_inr: number
           stripe_price_id: string | null
           topup_discount: number
+          billing_period: string | null
         }
         Insert: {
           can_topup?: boolean
@@ -96,6 +97,7 @@ export type Database = {
           price_inr?: number
           stripe_price_id?: string | null
           topup_discount?: number
+          billing_period?: string | null
         }
         Update: {
           can_topup?: boolean
@@ -107,6 +109,7 @@ export type Database = {
           price_inr?: number
           stripe_price_id?: string | null
           topup_discount?: number
+          billing_period?: string | null
         }
         Relationships: []
       }
