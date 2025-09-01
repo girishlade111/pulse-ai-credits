@@ -14,7 +14,203 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      credit_transactions: {
+        Row: {
+          created_at: string
+          credits_amount: number
+          description: string | null
+          id: string
+          request_type: Database["public"]["Enums"]["request_type"] | null
+          transaction_type: Database["public"]["Enums"]["transaction_type"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          credits_amount: number
+          description?: string | null
+          id?: string
+          request_type?: Database["public"]["Enums"]["request_type"] | null
+          transaction_type: Database["public"]["Enums"]["transaction_type"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          credits_amount?: number
+          description?: string | null
+          id?: string
+          request_type?: Database["public"]["Enums"]["request_type"] | null
+          transaction_type?: Database["public"]["Enums"]["transaction_type"]
+          user_id?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          email: string
+          full_name: string | null
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          email: string
+          full_name?: string | null
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          email?: string
+          full_name?: string | null
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      subscription_plans: {
+        Row: {
+          can_topup: boolean
+          created_at: string
+          credits: number
+          id: string
+          name: string
+          plan_type: Database["public"]["Enums"]["subscription_plan_type"]
+          price_inr: number
+          stripe_price_id: string | null
+          topup_discount: number
+        }
+        Insert: {
+          can_topup?: boolean
+          created_at?: string
+          credits?: number
+          id?: string
+          name: string
+          plan_type: Database["public"]["Enums"]["subscription_plan_type"]
+          price_inr?: number
+          stripe_price_id?: string | null
+          topup_discount?: number
+        }
+        Update: {
+          can_topup?: boolean
+          created_at?: string
+          credits?: number
+          id?: string
+          name?: string
+          plan_type?: Database["public"]["Enums"]["subscription_plan_type"]
+          price_inr?: number
+          stripe_price_id?: string | null
+          topup_discount?: number
+        }
+        Relationships: []
+      }
+      topup_packages: {
+        Row: {
+          created_at: string
+          credits: number
+          id: string
+          price_inr: number
+          stripe_price_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          credits: number
+          id?: string
+          price_inr: number
+          stripe_price_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          credits?: number
+          id?: string
+          price_inr?: number
+          stripe_price_id?: string | null
+        }
+        Relationships: []
+      }
+      user_credits: {
+        Row: {
+          created_at: string
+          current_credits: number
+          id: string
+          total_earned_credits: number
+          total_spent_credits: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          current_credits?: number
+          id?: string
+          total_earned_credits?: number
+          total_spent_credits?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          current_credits?: number
+          id?: string
+          total_earned_credits?: number
+          total_spent_credits?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_subscriptions: {
+        Row: {
+          created_at: string
+          current_period_end: string | null
+          current_period_start: string | null
+          id: string
+          plan_id: string
+          status: string
+          stripe_customer_id: string | null
+          stripe_subscription_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          current_period_end?: string | null
+          current_period_start?: string | null
+          id?: string
+          plan_id: string
+          status?: string
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          current_period_end?: string | null
+          current_period_start?: string | null
+          id?: string
+          plan_id?: string
+          status?: string
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_subscriptions_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -23,7 +219,9 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      request_type: "image_generation" | "normal_search" | "deep_research"
+      subscription_plan_type: "free" | "starter" | "pro" | "business"
+      transaction_type: "deduction" | "addition" | "plan_credit" | "topup"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +348,10 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      request_type: ["image_generation", "normal_search", "deep_research"],
+      subscription_plan_type: ["free", "starter", "pro", "business"],
+      transaction_type: ["deduction", "addition", "plan_credit", "topup"],
+    },
   },
 } as const
