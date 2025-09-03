@@ -11,7 +11,8 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useAuth } from '@/contexts/AuthContext';
-import { Bot, CreditCard, LogOut, Settings, User, Sparkles } from 'lucide-react';
+import { MinimalisticIcons } from '@/components/ui/minimalistic-icons';
+import { LogOut, Settings, User } from 'lucide-react';
 
 export const Navbar: React.FC = () => {
   const { user, profile, credits, signOut } = useAuth();
@@ -28,35 +29,15 @@ export const Navbar: React.FC = () => {
         <div className="flex items-center justify-between">
           {/* Logo */}
           <Link to="/" className="flex items-center space-x-2 group">
-            <Bot className="h-8 w-8 text-primary group-hover:text-primary-glow transition-colors" />
-            <span className="text-xl font-bold bg-gradient-to-r from-primary to-primary-glow bg-clip-text text-transparent">
-              Pulse AI
+            <MinimalisticIcons.Business className="h-8 w-8 text-primary group-hover:text-primary-glow transition-colors" size={32} />
+            <span className="text-xl font-bold text-foreground">
+              Pulse AI 🚀
             </span>
           </Link>
 
           {/* Navigation Links - Center */}
           <div className="hidden md:flex items-center space-x-6">
-            <Link 
-              to="/features" 
-              className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors flex items-center gap-2"
-            >
-              <Sparkles className="h-4 w-4" />
-              Features
-            </Link>
-            <Link 
-              to="/plans" 
-              className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors"
-            >
-              Pricing
-            </Link>
-            {user && (
-              <Link 
-                to="/dashboard" 
-                className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors"
-              >
-                Dashboard
-              </Link>
-            )}
+            {/* Navigation links removed as requested */}
           </div>
 
           {/* Right side */}
@@ -66,8 +47,8 @@ export const Navbar: React.FC = () => {
                 {/* Credits display */}
                 {credits && (
                   <div className="credit-badge">
-                    <CreditCard className="h-4 w-4 mr-1" />
-                    {credits.current_credits} credits
+                    <MinimalisticIcons.Credits className="h-4 w-4 mr-1 text-feature-green" size={16} />
+                    <span className="text-feature-green font-medium">{credits.current_credits}</span> credits
                   </div>
                 )}
 
@@ -96,7 +77,7 @@ export const Navbar: React.FC = () => {
                     </DropdownMenuLabel>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={() => navigate('/features')}>  
-                      <Sparkles className="mr-2 h-4 w-4" />
+                      <MinimalisticIcons.Search className="mr-2 h-4 w-4 text-feature-blue" size={16} />
                       <span>Features</span>
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => navigate('/dashboard')}>
@@ -104,10 +85,10 @@ export const Navbar: React.FC = () => {
                       <span>Dashboard</span>
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => navigate('/plans')}>
-                      <CreditCard className="mr-2 h-4 w-4" />
+                      <MinimalisticIcons.Credits className="mr-2 h-4 w-4 text-feature-purple" size={16} />
                       <span>Upgrade Plan</span>
                     </DropdownMenuItem>
-                    <DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => navigate('/settings')}>
                       <Settings className="mr-2 h-4 w-4" />
                       <span>Settings</span>
                     </DropdownMenuItem>

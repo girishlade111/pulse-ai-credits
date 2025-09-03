@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { MinimalisticIcons } from '@/components/ui/minimalistic-icons';
 import { 
   CreditCard, 
   TrendingUp, 
@@ -65,14 +66,14 @@ const Dashboard: React.FC = () => {
 
   const getTransactionIcon = (requestType?: string, transactionType?: string) => {
     if (transactionType === 'topup' || transactionType === 'plan_credit') {
-      return <TrendingUp className="h-4 w-4 text-success" />;
+      return <MinimalisticIcons.Credits className="h-4 w-4 text-feature-green" />;
     }
     
     switch (requestType) {
-      case 'image_generation': return <ImageIcon className="h-4 w-4 text-primary" />;
-      case 'deep_research': return <Zap className="h-4 w-4 text-warning" />;
-      case 'normal_search': return <Search className="h-4 w-4 text-muted-foreground" />;
-      default: return <Activity className="h-4 w-4 text-muted-foreground" />;
+      case 'image_generation': return <MinimalisticIcons.Image className="h-4 w-4 text-feature-green" />;
+      case 'deep_research': return <MinimalisticIcons.Research className="h-4 w-4 text-feature-purple" />;
+      case 'normal_search': return <MinimalisticIcons.Search className="h-4 w-4 text-feature-blue" />;
+      default: return <MinimalisticIcons.Check className="h-4 w-4 text-feature-orange" />;
     }
   };
 
@@ -93,8 +94,8 @@ const Dashboard: React.FC = () => {
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">
-            Welcome back, {profile?.full_name || 'User'}!
+          <h1 className="text-3xl font-bold mb-2 text-foreground">
+            🎉 Welcome back, {profile?.full_name || 'User'}!
           </h1>
           <p className="text-muted-foreground">
             Here's your AI usage overview and account details
@@ -107,10 +108,10 @@ const Dashboard: React.FC = () => {
           <Card className="card-glass">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Current Credits</CardTitle>
-              <CreditCard className="h-4 w-4 text-muted-foreground" />
+              <CreditCard className="h-4 w-4 text-feature-green" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-primary">{credits?.current_credits || 0}</div>
+              <div className="text-2xl font-bold text-feature-green">{credits?.current_credits || 0}</div>
               <p className="text-xs text-muted-foreground">
                 Available for AI requests
               </p>
@@ -121,10 +122,10 @@ const Dashboard: React.FC = () => {
           <Card className="card-glass">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Credits Earned</CardTitle>
-              <TrendingUp className="h-4 w-4 text-muted-foreground" />
+              <TrendingUp className="h-4 w-4 text-feature-blue" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{credits?.total_earned_credits || 0}</div>
+              <div className="text-2xl font-bold text-feature-blue">{credits?.total_earned_credits || 0}</div>
               <p className="text-xs text-muted-foreground">
                 Lifetime total earned
               </p>
@@ -135,10 +136,10 @@ const Dashboard: React.FC = () => {
           <Card className="card-glass">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Credits Used</CardTitle>
-              <Activity className="h-4 w-4 text-muted-foreground" />
+              <Activity className="h-4 w-4 text-feature-purple" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{credits?.total_spent_credits || 0}</div>
+              <div className="text-2xl font-bold text-feature-purple">{credits?.total_spent_credits || 0}</div>
               <p className="text-xs text-muted-foreground">
                 Total AI requests made
               </p>
@@ -149,10 +150,10 @@ const Dashboard: React.FC = () => {
           <Card className="card-glass">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Current Plan</CardTitle>
-              <Zap className="h-4 w-4 text-muted-foreground" />
+              <Zap className="h-4 w-4 text-feature-orange" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold capitalize">{subscription?.name || 'Free Plan'}</div>
+              <div className="text-2xl font-bold capitalize text-feature-orange">{subscription?.name || 'Free Plan'}</div>
               <p className="text-xs text-muted-foreground">
                 {subscription?.can_topup ? 'Top-ups available' : 'Upgrade for top-ups'}
               </p>
@@ -167,7 +168,7 @@ const Dashboard: React.FC = () => {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div>
-                  <CardTitle>Recent Activity</CardTitle>
+                  <CardTitle className="text-foreground">📊 Recent Activity</CardTitle>
                   <CardDescription>Your latest AI requests and credit transactions</CardDescription>
                 </div>
                 <Button variant="ghost" size="sm" onClick={fetchTransactions}>
@@ -182,9 +183,9 @@ const Dashboard: React.FC = () => {
                 </div>
               ) : transactions.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
-                  <Activity className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                  <MinimalisticIcons.Check className="h-8 w-8 mx-auto mb-2 text-feature-blue opacity-50" />
                   <p>No activity yet</p>
-                  <p className="text-sm">Start using AI features to see your activity here</p>
+                  <p className="text-sm">Start using <span className="text-feature-purple font-medium">AI features</span> to see your activity here</p>
                 </div>
               ) : (
                 <div className="space-y-3">
@@ -221,7 +222,7 @@ const Dashboard: React.FC = () => {
             {/* Plan Management */}
             <Card className="card-glass">
               <CardHeader>
-                <CardTitle>Plan Management</CardTitle>
+                <CardTitle className="text-foreground">📈 Plan Management</CardTitle>
                 <CardDescription>Manage your subscription and credits</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -233,7 +234,7 @@ const Dashboard: React.FC = () => {
                     </p>
                   </div>
                   <Button variant="outline" onClick={() => navigate('/plans')}>
-                    <ArrowUpRight className="h-4 w-4 mr-2" />
+                    <ArrowUpRight className="h-4 w-4 mr-2 text-feature-blue" />
                     {subscription?.plan_type === 'free' ? 'Upgrade' : 'Manage'}
                   </Button>
                 </div>
@@ -243,8 +244,8 @@ const Dashboard: React.FC = () => {
                     className="w-full btn-hero" 
                     onClick={() => navigate('/plans')}
                   >
-                    <CreditCard className="h-4 w-4 mr-2" />
-                    Buy More Credits
+                    <MinimalisticIcons.Credits className="h-4 w-4 mr-2" />
+                    <span className="font-medium">Buy More Credits 💳</span>
                   </Button>
                 )}
               </CardContent>
@@ -253,28 +254,28 @@ const Dashboard: React.FC = () => {
             {/* Usage Tips */}
             <Card className="card-glass">
               <CardHeader>
-                <CardTitle>Usage Tips</CardTitle>
+                <CardTitle className="text-foreground">💡 Usage Tips</CardTitle>
                 <CardDescription>Maximize your AI experience</CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="flex items-start gap-3">
-                  <Search className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
+                  <Search className="h-5 w-5 text-feature-blue mt-0.5 flex-shrink-0" />
                   <div>
-                    <p className="text-sm font-medium">Quick Search</p>
+                    <p className="text-sm font-medium text-foreground">Quick Search</p>
                     <p className="text-xs text-muted-foreground">Use for simple questions - costs only 1 credit</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
-                  <Zap className="h-5 w-5 text-warning mt-0.5 flex-shrink-0" />
+                  <Zap className="h-5 w-5 text-feature-purple mt-0.5 flex-shrink-0" />
                   <div>
-                    <p className="text-sm font-medium">Deep Research</p>
+                    <p className="text-sm font-medium text-foreground">Deep Research</p>
                     <p className="text-xs text-muted-foreground">For comprehensive analysis - 5 credits</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
-                  <ImageIcon className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
+                  <ImageIcon className="h-5 w-5 text-feature-green mt-0.5 flex-shrink-0" />
                   <div>
-                    <p className="text-sm font-medium">Image Generation</p>
+                    <p className="text-sm font-medium text-foreground">Image Generation</p>
                     <p className="text-xs text-muted-foreground">Create AI images - 1 credit each</p>
                   </div>
                 </div>

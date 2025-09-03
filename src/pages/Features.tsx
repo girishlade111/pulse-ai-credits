@@ -1,18 +1,9 @@
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { MinimalisticIcons } from '@/components/ui/minimalistic-icons';
 import { 
-  Search, 
-  Zap, 
-  ImageIcon, 
-  Target, 
-  CheckSquare, 
-  Layers, 
-  Globe,
   Clock,
-  Sparkles,
-  Star,
-  Zap as Lightning,
   Timer
 } from 'lucide-react';
 
@@ -27,10 +18,10 @@ const Features: React.FC = () => {
     {
       id: 'quick_search',
       name: 'Quick Search',
-      icon: Search,
+      icon: MinimalisticIcons.Search,
       credits: 1,
-      color: 'text-blue-400',
-      bgColor: 'bg-blue-400/20',
+      color: 'text-feature-blue',
+      bgColor: 'bg-feature-blue/10',
       description: 'Ask anything in your mind - instant AI-powered answers',
       detailedInfo: 'Perfect for when you need immediate answers to any question that comes to mind. Our Quick Search leverages advanced AI algorithms to provide accurate, contextual responses in seconds. Whether you\'re looking for facts, explanations, or quick solutions, this feature delivers reliable information instantly.',
       useCase: 'Best for: Quick answers, instant facts, immediate clarification',
@@ -41,10 +32,10 @@ const Features: React.FC = () => {
     {
       id: 'deep_research',
       name: 'Deep Research',
-      icon: Zap,
+      icon: MinimalisticIcons.Research,
       credits: 2,
-      color: 'text-yellow-400',
-      bgColor: 'bg-yellow-400/20',
+      color: 'text-feature-purple',
+      bgColor: 'bg-feature-purple/10',
       description: 'Research on any topic with comprehensive analysis',
       detailedInfo: 'Dive deep into any subject with our comprehensive research engine. This feature conducts thorough investigations, cross-references multiple sources, and provides well-structured, in-depth analysis. Perfect for when you need more than just surface-level information and want detailed insights with proper context.',
       useCase: 'Best for: Quick and in-depth answers, topic exploration, comprehensive understanding',
@@ -55,10 +46,10 @@ const Features: React.FC = () => {
     {
       id: 'image_generation',
       name: 'Generate Image',
-      icon: ImageIcon,
+      icon: MinimalisticIcons.Image,
       credits: 1,
-      color: 'text-purple-400',
-      bgColor: 'bg-purple-400/20',
+      color: 'text-feature-green',
+      bgColor: 'bg-feature-green/10',
       description: 'Create any image from your imagination',
       detailedInfo: 'Transform your ideas into stunning visual content using cutting-edge AI image generation technology. Simply describe what you want to see, and our system will create unique, high-quality images tailored to your specifications. From artistic concepts to practical illustrations, bring your vision to life.',
       useCase: 'Best for: Generating images, creative visualization, concept art, marketing materials',
@@ -69,10 +60,10 @@ const Features: React.FC = () => {
     {
       id: 'pro_search',
       name: 'Pro Search',
-      icon: Target,
+      icon: MinimalisticIcons.Pro,
       credits: 3,
-      color: 'text-green-400',
-      bgColor: 'bg-green-400/20',
+      color: 'text-feature-orange',
+      bgColor: 'bg-feature-orange/10',
       description: 'Ranked web URLs with long, relevant content',
       detailedInfo: 'Professional-grade web search that delivers ranked URLs with extensive, relevant content. This tool is specifically optimized for AI agents and provides high-quality, structured web results. Perfect for research that requires specific web sources and detailed content analysis from authoritative websites.',
       useCase: 'Best for: Web search tool calls for AI agents, source verification, professional research',
@@ -83,10 +74,10 @@ const Features: React.FC = () => {
     {
       id: 'task',
       name: 'Task',
-      icon: CheckSquare,
+      icon: MinimalisticIcons.Check,
       credits: 10,
-      color: 'text-orange-400',
-      bgColor: 'bg-orange-400/20',
+      color: 'text-feature-pink',
+      bgColor: 'bg-feature-pink/10',
       description: 'Enrich entities with optimized quality & freshness',
       detailedInfo: 'Advanced task automation system designed to enrich lists of entities with the highest quality and most up-to-date information available. This powerful feature is perfect for database enhancement, workflow automation, and systematic data enrichment processes that require precision and reliability.',
       useCase: 'Best for: Database enrichment, repeated workflow automation, entity enhancement',
@@ -97,10 +88,10 @@ const Features: React.FC = () => {
     {
       id: 'deep_research_8x',
       name: '8x Deep Research',
-      icon: Layers,
+      icon: MinimalisticIcons.Research,
       credits: 40,
-      color: 'text-red-400',
-      bgColor: 'bg-red-400/20',
+      color: 'text-feature-purple',
+      bgColor: 'bg-feature-purple/10',
       description: 'Research anything deeply with structured outputs',
       detailedInfo: 'Our most comprehensive research solution that provides 8x the depth of standard research. This feature conducts exhaustive investigations with structured, professional-grade outputs. Perfect for academic research, market analysis, strategic planning, and any scenario requiring the highest level of research depth and documentation.',
       useCase: 'Best for: In-depth research on any question, academic papers, strategic analysis',
@@ -111,10 +102,10 @@ const Features: React.FC = () => {
     {
       id: 'find_all',
       name: 'Find All',
-      icon: Globe,
+      icon: MinimalisticIcons.Search,
       credits: 40,
-      color: 'text-cyan-400',
-      bgColor: 'bg-cyan-400/20',
+      color: 'text-feature-yellow',
+      bgColor: 'bg-feature-yellow/10',
       description: 'Build comprehensive datasets from the web',
       detailedInfo: 'Create structured, comprehensive datasets by systematically gathering and organizing information from across the web. This powerful tool builds complete databases of entities, compiling relevant information into well-structured formats perfect for analysis, research, and business intelligence applications.',
       useCase: 'Best for: Creating structured datasets of entities, market research, data compilation',
@@ -129,8 +120,8 @@ const Features: React.FC = () => {
       <div className="container mx-auto px-4 py-12">
         {/* Header */}
         <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold mb-4 bg-gradient-to-r from-primary to-primary-glow bg-clip-text text-transparent">
-            AI-Powered Intelligence at Your Fingertips
+          <h1 className="text-4xl font-bold mb-4 text-foreground">
+            🤖 AI-Powered Intelligence at Your Fingertips
           </h1>
           <p className="text-xl text-muted-foreground max-w-3xl mx-auto mb-6">
             Discover our comprehensive suite of AI-driven tools designed to solve complex challenges 
@@ -139,15 +130,15 @@ const Features: React.FC = () => {
           </p>
           <div className="flex flex-wrap justify-center gap-4 text-sm text-muted-foreground">
             <div className="flex items-center gap-2">
-              <Lightning className="h-4 w-4 text-primary" />
+              <MinimalisticIcons.Business className="h-4 w-4" size={16} />
               <span>7 Specialized AI Tools</span>
             </div>
             <div className="flex items-center gap-2">
-              <Clock className="h-4 w-4 text-primary" />
+              <Clock className="h-4 w-4" />
               <span>Response Times: 5s to 60min</span>
             </div>
             <div className="flex items-center gap-2">
-              <Star className="h-4 w-4 text-primary" />
+              <MinimalisticIcons.Credits className="h-4 w-4" size={16} />
               <span>Credit-Based Pricing</span>
             </div>
           </div>
@@ -157,7 +148,7 @@ const Features: React.FC = () => {
         <div className="mb-20">
           <div className="text-center mb-12">
             <h2 className="text-3xl font-bold mb-4 text-foreground">
-              Essential AI Tools
+              ✨ Essential AI Tools
             </h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
               Perfect for everyday tasks and quick AI assistance. Start here to explore our core capabilities.
@@ -281,7 +272,7 @@ const Features: React.FC = () => {
                           
                           <div className="space-y-3">
                             <div className="flex items-start gap-2">
-                              <Star className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
+                              <MinimalisticIcons.Check className="h-5 w-5 text-muted-foreground mt-0.5 flex-shrink-0" size={20} />
                               <div className="flex-1">
                                 <p className="text-sm font-medium text-foreground">Best For</p>
                                 <p className="text-sm text-muted-foreground line-clamp-2">{feature.useCase}</p>
@@ -289,7 +280,7 @@ const Features: React.FC = () => {
                             </div>
                             
                             <div className="flex items-start gap-2">
-                              <Sparkles className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
+                              <MinimalisticIcons.Search className="h-5 w-5 text-muted-foreground mt-0.5 flex-shrink-0" size={20} />
                               <div className="flex-1">
                                 <p className="text-sm font-medium text-foreground">Key Features</p>
                                 <p className="text-sm text-muted-foreground line-clamp-1">{feature.features[0]}</p>
@@ -302,7 +293,7 @@ const Features: React.FC = () => {
                       {/* Preview Image Section - Consistent Position and Size for Perfect Alignment */}
                       <div className="mt-auto pt-6 border-t border-border/50">
                         <h4 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
-                          <ImageIcon className="h-5 w-5 text-primary" />
+                          <MinimalisticIcons.Image className="h-5 w-5 text-muted-foreground" size={20} />
                           Interface Preview
                         </h4>
                         <div className="w-full h-80 bg-card border border-border/30 rounded-xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-500 group">

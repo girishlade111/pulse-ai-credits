@@ -5,17 +5,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { MinimalisticIcons } from '@/components/ui/minimalistic-icons';
 import { 
-  CheckCircle, 
-  Star, 
-  Zap, 
-  Crown, 
-  Building2, 
-  CreditCard,
-  Loader2,
-  X,
-  Gift,
-  AlertTriangle
+  Loader2
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -44,10 +36,33 @@ const Plans: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [processingPlan, setProcessingPlan] = useState<string | null>(null);
   const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'annual'>('monthly');
+  const [switchingPeriod, setSwitchingPeriod] = useState(false);
 
   useEffect(() => {
     fetchPlansAndPackages();
+    
+    // Add keyboard shortcut for billing period toggle
+    const handleKeyPress = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.key === 'b') {
+        e.preventDefault();
+        handleBillingPeriodChange(billingPeriod === 'monthly' ? 'annual' : 'monthly');
+      }
+    };
+    
+    document.addEventListener('keydown', handleKeyPress);
+    return () => document.removeEventListener('keydown', handleKeyPress);
   }, []);
+
+  // Enhanced billing period switching with smooth transition
+  const handleBillingPeriodChange = (newPeriod: 'monthly' | 'annual') => {
+    if (newPeriod === billingPeriod) return;
+    
+    setSwitchingPeriod(true);
+    setTimeout(() => {
+      setBillingPeriod(newPeriod);
+      setSwitchingPeriod(false);
+    }, 150);
+  };
 
   const fetchPlansAndPackages = async () => {
     try {
@@ -56,7 +71,9 @@ const Plans: React.FC = () => {
         supabase.from('topup_packages').select('*').order('credits')
       ]);
 
-      if (plansResponse.data) setPlans(plansResponse.data);
+      if (plansResponse.data) {
+        setPlans(plansResponse.data);
+      }
       if (topupResponse.data) setTopupPackages(topupResponse.data);
     } catch (error) {
       console.error('Error fetching plans:', error);
@@ -66,13 +83,50 @@ const Plans: React.FC = () => {
     }
   };
 
-  // Filter plans by billing period
+  // Filter plans by billing period with dynamic annual plan creation
   const getFilteredPlans = () => {
     if (billingPeriod === 'annual') {
-      // For annual, show free plan + annual versions of paid plans
+      // First, try to get annual plans from database
       const freePlan = plans.find(p => p.plan_type === 'free');
-      const annualPlans = plans.filter(p => p.billing_period === 'annual');
-      return freePlan ? [freePlan, ...annualPlans] : annualPlans;
+      const existingAnnualPlans = plans.filter(p => p.billing_period === 'annual');
+      
+      // If we have annual plans in the database, use them
+      if (existingAnnualPlans.length > 0) {
+        return freePlan ? [freePlan, ...existingAnnualPlans] : existingAnnualPlans;
+      }
+      
+      // Otherwise, create annual plans dynamically from monthly plans
+      const monthlyPlans = plans.filter(p => 
+        p.plan_type !== 'free' && (p.billing_period || 'monthly') === 'monthly'
+      );
+      
+      const dynamicAnnualPlans = monthlyPlans.map(monthlyPlan => {
+        // Calculate annual pricing with specific pricing for each plan
+        let annualPrice;
+        switch(monthlyPlan.plan_type) {
+          case 'starter':
+            annualPrice = 549900; // ₹5,499 per year (8.17% off)
+            break;
+          case 'pro':
+            annualPrice = 999900; // ₹9,999 per year (16.59% off)
+            break;
+          case 'business':
+            annualPrice = 2999900; // ₹29,999 per year (16.67% off)
+            break;
+          default:
+            annualPrice = Math.round(monthlyPlan.price_inr * 12 * 0.84);
+        }
+        
+        return {
+          ...monthlyPlan,
+          id: `${monthlyPlan.id}-annual`,
+          name: `${monthlyPlan.plan_type.charAt(0).toUpperCase() + monthlyPlan.plan_type.slice(1)} Plan (Annual)`,
+          price_inr: annualPrice,
+          billing_period: 'annual' as const
+        };
+      });
+      
+      return freePlan ? [freePlan, ...dynamicAnnualPlans] : dynamicAnnualPlans;
     } else {
       // For monthly, show free plan + monthly versions of paid plans
       return plans.filter(plan => 
@@ -82,10 +136,34 @@ const Plans: React.FC = () => {
     }
   };
 
-  // Calculate annual savings
+  // Calculate annual savings with support for dynamic annual plans
   const calculateAnnualSavings = (planType: string) => {
     const monthlyPlan = plans.find(p => p.plan_type === planType && (p.billing_period || 'monthly') === 'monthly');
-    const annualPlan = plans.find(p => p.plan_type === planType && p.billing_period === 'annual');
+    let annualPlan = plans.find(p => p.plan_type === planType && p.billing_period === 'annual');
+    
+    // If no annual plan exists in database, calculate using exact pricing
+    if (!annualPlan && monthlyPlan) {
+      let annualPrice;
+      switch(planType) {
+        case 'starter':
+          annualPrice = 549900; // ₹5,499 per year
+          break;
+        case 'pro':
+          annualPrice = 999900; // ₹9,999 per year
+          break;
+        case 'business':
+          annualPrice = 2999900; // ₹29,999 per year
+          break;
+        default:
+          annualPrice = Math.round(monthlyPlan.price_inr * 12 * 0.84);
+      }
+      
+      annualPlan = {
+        ...monthlyPlan,
+        price_inr: annualPrice,
+        billing_period: 'annual'
+      } as any;
+    }
     
     if (!monthlyPlan || !annualPlan) return { percentage: 0, amount: 0 };
     
@@ -96,14 +174,22 @@ const Plans: React.FC = () => {
     return { percentage: Math.round(percentage * 100) / 100, amount: savings };
   };
 
-  // Get display price and period
+  // Get display price and period with better annual handling
   const getPriceDisplay = (plan: SubscriptionPlan) => {
     if (plan.price_inr === 0) return { price: 'Free', period: '' };
     
     const basePrice = formatPrice(plan.price_inr);
-    if (billingPeriod === 'annual') {
-      return { price: basePrice, period: '/year' };
+    
+    // For annual plans, show annual price and mention monthly equivalent
+    if (plan.billing_period === 'annual') {
+      const monthlyEquivalent = formatPrice(Math.round(plan.price_inr / 12));
+      return { 
+        price: basePrice, 
+        period: `/year`,
+        monthlyEquivalent: `(${monthlyEquivalent}/month)` 
+      };
     }
+    
     return { price: basePrice, period: '/month' };
   };
 
@@ -116,12 +202,24 @@ const Plans: React.FC = () => {
   };
 
   const getPlanIcon = (planType: string) => {
+    const colorMap = {
+      'free': 'text-muted-foreground',
+      'starter': 'text-feature-blue',
+      'pro': 'text-feature-purple', 
+      'business': 'text-feature-orange'
+    };
+    
+    const iconProps = { 
+      className: `h-6 w-6 ${colorMap[planType] || 'text-muted-foreground'}`, 
+      size: 24 
+    };
+    
     switch (planType) {
-      case 'free': return <Star className="h-6 w-6" />;
-      case 'starter': return <Zap className="h-6 w-6" />;
-      case 'pro': return <Crown className="h-6 w-6" />;
-      case 'business': return <Building2 className="h-6 w-6" />;
-      default: return <Star className="h-6 w-6" />;
+      case 'free': return <MinimalisticIcons.Free {...iconProps} />;
+      case 'starter': return <MinimalisticIcons.Starter {...iconProps} />;
+      case 'pro': return <MinimalisticIcons.Pro {...iconProps} />;
+      case 'business': return <MinimalisticIcons.Business {...iconProps} />;
+      default: return <MinimalisticIcons.Free {...iconProps} />;
     }
   };
 
@@ -247,72 +345,124 @@ const Plans: React.FC = () => {
     <div className="min-h-screen bg-gradient-hero">
       <div className="container mx-auto px-4 py-12">
         <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold mb-4 bg-gradient-to-r from-primary to-primary-glow bg-clip-text text-transparent">
+          <h1 className="text-4xl font-bold mb-4 text-gradient">
             Choose Your AI Plan
           </h1>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto mb-6">
             Unlock the full potential of AI with our flexible credit system and powerful features
           </p>
           
-          {/* Billing Period Toggle */}
-          <div className="flex items-center justify-center mb-8">
-            <div className="inline-flex items-center bg-card/50 border border-border/30 rounded-lg p-1">
-              <Button
-                variant={billingPeriod === 'monthly' ? 'default' : 'ghost'}
-                size="sm"
-                onClick={() => setBillingPeriod('monthly')}
-                className={`${billingPeriod === 'monthly' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'} transition-all`}
-              >
-                Monthly
-              </Button>
-              <Button
-                variant={billingPeriod === 'annual' ? 'default' : 'ghost'}
-                size="sm"
-                onClick={() => setBillingPeriod('annual')}
-                className={`${billingPeriod === 'annual' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'} transition-all relative`}
-              >
-                Annual
-                <Badge className="ml-2 bg-green-500/20 text-green-700 border-green-500/30 text-xs">
-                  Save up to 16%
-                </Badge>
-              </Button>
+          {/* Billing Period Toggle - Enhanced Visibility */}
+          <div className="flex flex-col items-center justify-center mb-12">
+            <h3 className="text-lg font-semibold text-center mb-4">Choose Your Billing Period</h3>
+            <div className="relative">
+              <div className="inline-flex items-center bg-card border-2 border-primary/20 rounded-xl p-2 shadow-lg">
+                <Button
+                  variant={billingPeriod === 'monthly' ? 'default' : 'ghost'}
+                  size="lg"
+                  onClick={() => handleBillingPeriodChange('monthly')}
+                  disabled={switchingPeriod}
+                  className={`${
+                    billingPeriod === 'monthly' 
+                      ? 'bg-primary text-primary-foreground shadow-md border-primary/50' 
+                      : 'text-foreground hover:text-primary hover:bg-primary/10'
+                  } transition-all duration-300 px-6 py-3 font-medium min-w-[120px] ${switchingPeriod ? 'opacity-50' : ''}`}
+                >
+                  {switchingPeriod && billingPeriod !== 'monthly' ? (
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  ) : null}
+                  Monthly
+                </Button>
+                <Button
+                  variant={billingPeriod === 'annual' ? 'default' : 'ghost'}
+                  size="lg"
+                  onClick={() => handleBillingPeriodChange('annual')}
+                  disabled={switchingPeriod}
+                  className={`${
+                    billingPeriod === 'annual' 
+                      ? 'bg-primary text-primary-foreground shadow-md border-primary/50' 
+                      : 'text-foreground hover:text-primary hover:bg-primary/10'
+                  } transition-all duration-300 px-6 py-3 font-medium min-w-[120px] relative ${switchingPeriod ? 'opacity-50' : ''}`}
+                >
+                  {switchingPeriod && billingPeriod !== 'annual' ? (
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  ) : null}
+                  Annual
+                  <Badge className="ml-2 bg-feature-green text-white border-0 text-xs font-bold shadow-sm">
+                    💰 Save up to 16.67%
+                  </Badge>
+                </Button>
+              </div>
+              {/* Visual indicator */}
+              <div className="absolute -bottom-3 left-1/2 transform -translate-x-1/2">
+                <div className="w-2 h-2 bg-primary rounded-full animate-pulse"></div>
+              </div>
+            </div>
+            <p className="text-sm text-muted-foreground mt-4 text-center max-w-md">
+              Switch between monthly and annual billing to see different pricing options.
+              {billingPeriod === 'annual' && ' Annual plans offer significant savings!'}
+              <br />
+              <span className="text-xs text-muted-foreground/70 mt-1 inline-block">
+                💡 Tip: Press <kbd className="px-1 py-0.5 bg-muted rounded text-xs">Ctrl+B</kbd> to toggle billing period
+              </span>
+            </p>
+          </div>
+          
+          <div className="flex flex-wrap justify-center gap-4 text-sm text-muted-foreground mb-6">
+            <div className="flex items-center gap-2">
+              <MinimalisticIcons.Gift className="h-4 w-4 text-feature-pink" />
+              <span>Paid plans include <span className="text-feature-pink font-medium">bonus credits</span></span>
+            </div>
+            <div className="flex items-center gap-2">
+              <MinimalisticIcons.Warning className="h-4 w-4 text-feature-orange" />
+              <span>Free users cannot purchase <span className="text-feature-orange font-medium">top-ups</span></span>
+            </div>
+            <div className="flex items-center gap-2">
+              <MinimalisticIcons.Credits className="h-4 w-4 text-feature-blue" />
+              <span>Top-up <span className="text-feature-blue font-medium">discounts</span> for Pro & Business</span>
             </div>
           </div>
           
-          <div className="flex flex-wrap justify-center gap-4 text-sm text-muted-foreground">
-            <div className="flex items-center gap-2">
-              <Gift className="h-4 w-4 text-primary" />
-              <span>Paid plans include bonus credits</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <AlertTriangle className="h-4 w-4 text-primary" />
-              <span>Free users cannot purchase top-ups</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <CreditCard className="h-4 w-4 text-primary" />
-              <span>Top-up discounts for Pro & Business</span>
+          {/* Additional billing period info */}
+          <div className="text-center mb-8">
+            <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-300 ${
+              billingPeriod === 'annual' 
+                ? 'bg-green-500/10 border border-green-500/30 text-green-400' 
+                : 'bg-blue-500/10 border border-blue-500/30 text-blue-400'
+            }`}>
+              {billingPeriod === 'annual' ? (
+                <>
+                  🎉 <span className="font-medium">Great choice!</span> Annual billing saves you money and provides uninterrupted service.
+                </>
+              ) : (
+                <>
+                  📅 <span className="font-medium">Monthly billing</span> - Cancel anytime with full flexibility.
+                </>
+              )}
             </div>
           </div>
         </div>
 
         {/* Subscription Plans */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
-          {getFilteredPlans().map((plan) => {
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-16 transition-all duration-500">
+          {getFilteredPlans().map((plan, index) => {
             const { base, bonus } = getPlanCredits(plan.plan_type, plan.credits);
             const isPaidPlan = plan.plan_type !== 'free';
-            const { price, period } = getPriceDisplay(plan);
+            const priceInfo = getPriceDisplay(plan);
             const savings = calculateAnnualSavings(plan.plan_type);
             const showSavings = billingPeriod === 'annual' && isPaidPlan && savings.percentage > 0;
+            const isDynamicAnnual = plan.id.includes('-annual'); // Dynamic annual plan indicator
             
             return (
               <Card 
-                key={plan.id} 
-                className={`card-glass relative overflow-hidden ${
+                key={`${plan.id}-${billingPeriod}`}
+                className={`card-glass relative overflow-hidden transform transition-all duration-500 hover:scale-105 ${
                   isCurrentPlan(plan.plan_type) 
-                    ? 'ring-2 ring-primary shadow-[var(--shadow-primary)]' 
+                    ? 'ring-2 ring-primary shadow-[var(--shadow-primary)] border-primary/50' 
                     : ''
-                } ${showSavings ? 'border-green-500/50' : ''}`}
+                } ${showSavings ? 'border-green-500/50 shadow-green-500/20' : ''}`}
                 data-plan={plan.plan_type}
+                style={{ animationDelay: `${index * 100}ms` }}
               >
                 {isCurrentPlan(plan.plan_type) && (
                   <div className="absolute top-0 left-0 right-0 bg-primary text-primary-foreground text-center py-2 text-sm font-medium">
@@ -321,13 +471,13 @@ const Plans: React.FC = () => {
                 )}
                 
                 {showSavings && (
-                  <div className="absolute top-0 right-0 bg-gradient-to-r from-green-500 to-green-600 text-white text-xs px-3 py-1 rounded-bl-lg font-semibold shadow-lg">
+                  <div className="absolute top-0 right-0 bg-gradient-to-r from-green-500 to-green-400 text-white text-sm px-4 py-2 rounded-bl-lg font-bold shadow-lg border-2 border-green-300 animate-pulse">
                     💰 {savings.percentage}% OFF
                   </div>
                 )}
                 
                 <CardHeader className={`text-center ${isCurrentPlan(plan.plan_type) ? 'pt-12' : showSavings ? 'pt-8' : 'pt-6'}`}>
-                  <div className="flex justify-center mb-4 text-primary">
+                  <div className="flex justify-center mb-4">
                     {getPlanIcon(plan.plan_type)}
                   </div>
                   <CardTitle className="text-xl">
@@ -338,9 +488,14 @@ const Plans: React.FC = () => {
                   </CardTitle>
                   <CardDescription className="space-y-2">
                     <div className="text-3xl font-bold text-foreground">
-                      {price}
-                      {period && <span className="text-sm text-muted-foreground">{period}</span>}
+                      {priceInfo.price}
+                      {priceInfo.period && <span className="text-sm text-muted-foreground">{priceInfo.period}</span>}
                     </div>
+                    {priceInfo.monthlyEquivalent && (
+                      <div className="text-xs text-muted-foreground">
+                        {priceInfo.monthlyEquivalent}
+                      </div>
+                    )}
                     {showSavings && (
                       <div className="space-y-2">
                         <div className="text-sm text-muted-foreground">
@@ -348,14 +503,14 @@ const Plans: React.FC = () => {
                           <span className="ml-1 text-xs">if paid monthly</span>
                         </div>
                         <div className="flex items-center justify-center gap-1 flex-wrap">
-                          <Badge className="bg-green-500/20 text-green-700 border-green-500/30 font-semibold text-xs">
+                          <Badge className="bg-feature-green/20 text-feature-green border-feature-green/30 font-medium text-xs">
                             💰 Save {formatPrice(savings.amount)}
                           </Badge>
-                          <Badge className="bg-green-600/20 text-green-800 border-green-600/30 font-semibold text-xs">
+                          <Badge className="bg-feature-purple/20 text-feature-purple border-feature-purple/30 font-medium text-xs">
                             🎉 {savings.percentage}% OFF
                           </Badge>
                         </div>
-                        <div className="text-xs text-green-600 font-medium">
+                        <div className="text-xs text-feature-green font-medium">
                           Annual savings compared to monthly billing
                         </div>
                       </div>
@@ -367,17 +522,19 @@ const Plans: React.FC = () => {
                   <div className="space-y-3">
                     {/* Credits Display */}
                     <div className="flex items-center gap-2">
-                      <CheckCircle className="h-4 w-4 text-primary" />
+                      <MinimalisticIcons.Check className="h-4 w-4 text-feature-green" />
                       {isPaidPlan ? (
                         <div className="flex flex-col">
-                          <span className="text-sm font-medium">{base} base + {bonus} bonus credits</span>
+                          <span className="text-sm font-medium">
+                            <span className="text-feature-blue">{base} base</span> + <span className="text-feature-purple">{bonus} bonus</span> credits
+                          </span>
                           <span className="text-xs text-muted-foreground">
-                            = {plan.credits} total credits/{plan.billing_period === 'annual' ? 'month (renewed annually)' : 'month'}
+                            = <span className="text-primary font-medium">{plan.credits} total credits</span>/{plan.billing_period === 'annual' ? 'month (renewed annually)' : 'month'}
                           </span>
                         </div>
                       ) : (
                         <div className="flex flex-col">
-                          <span className="text-sm font-medium">{plan.credits} credits</span>
+                          <span className="text-sm font-medium"><span className="text-primary">{plan.credits} credits</span></span>
                           <span className="text-xs text-muted-foreground">One-time only, no monthly reset</span>
                         </div>
                       )}
@@ -385,21 +542,21 @@ const Plans: React.FC = () => {
                     
                     {/* All AI Features */}
                     <div className="flex items-center gap-2">
-                      <CheckCircle className="h-4 w-4 text-primary" />
-                      <span className="text-sm">All AI features access</span>
+                      <MinimalisticIcons.Check className="h-4 w-4 text-feature-green" />
+                      <span className="text-sm">All <span className="text-feature-purple font-medium">AI features</span> access</span>
                     </div>
                     
                     {/* Top-up availability */}
                     <div className="flex items-center gap-2">
                       {plan.can_topup ? (
-                        <CheckCircle className="h-4 w-4 text-primary" />
+                        <MinimalisticIcons.Check className="h-4 w-4 text-feature-green" />
                       ) : (
-                        <X className="h-4 w-4 text-muted-foreground" />
+                        <MinimalisticIcons.Close className="h-4 w-4 text-feature-orange" />
                       )}
                       <span className="text-sm">
                         {plan.can_topup 
-                          ? `Credit top-ups ${plan.topup_discount > 0 ? `(${plan.topup_discount}% off)` : '(normal price)'}` 
-                          : 'No top-ups available'
+                          ? <>Credit <span className="text-feature-blue font-medium">top-ups</span> {plan.topup_discount > 0 ? `(${plan.topup_discount}% off)` : '(normal price)'}</> 
+                          : <>No <span className="text-feature-orange font-medium">top-ups</span> available</>
                         }
                       </span>
                     </div>
@@ -407,16 +564,18 @@ const Plans: React.FC = () => {
                     {/* Plan type indicators */}
                     {plan.plan_type === 'free' && (
                       <div className="flex items-center gap-2">
-                        <AlertTriangle className="h-4 w-4 text-yellow-500" />
-                        <span className="text-sm text-yellow-600">Trial use only</span>
+                        <MinimalisticIcons.Warning className="h-4 w-4 text-feature-yellow" />
+                        <span className="text-sm"><span className="text-feature-yellow font-medium">Trial</span> use only</span>
                       </div>
                     )}
                     
                     {isPaidPlan && (
                       <div className="flex items-center gap-2">
-                        <Gift className="h-4 w-4 text-green-500" />
-                        <span className="text-sm text-green-600">
-                          {plan.billing_period === 'annual' ? 'Annual subscription' : 'Monthly subscription'}
+                        <MinimalisticIcons.Gift className="h-4 w-4 text-feature-pink" />
+                        <span className="text-sm">
+                          <span className="text-feature-pink font-medium">
+                            {plan.billing_period === 'annual' ? 'Annual subscription' : 'Monthly subscription'}
+                          </span>
                         </span>
                       </div>
                     )}
@@ -448,7 +607,7 @@ const Plans: React.FC = () => {
         {user && (
           <div className="max-w-6xl mx-auto">
             <div className="text-center mb-12">
-              <h2 className="text-3xl font-bold mb-4 bg-gradient-to-r from-primary to-primary-glow bg-clip-text text-transparent">
+              <h2 className="text-3xl font-bold mb-4 text-foreground">
                 💳 Credit Top-ups Preview
               </h2>
               {subscription?.plan_type === 'free' ? (
@@ -458,10 +617,10 @@ const Plans: React.FC = () => {
                     See how much you can save with Pro and Business discounts!
                   </p>
                   <div className="flex flex-wrap justify-center gap-2">
-                    <Badge className="bg-orange-500/20 text-orange-700 border-orange-500/30 text-sm px-3 py-1">
+                    <Badge className="bg-feature-orange/20 text-feature-orange border-feature-orange/30 text-sm px-3 py-1 font-semibold">
                       ⚠️ Upgrade Required to Purchase
                     </Badge>
-                    <Badge className="bg-blue-500/20 text-blue-700 border-blue-500/30 text-sm px-3 py-1">
+                    <Badge className="bg-feature-blue/20 text-feature-blue border-feature-blue/30 text-sm px-3 py-1 font-semibold">
                       🎯 Preview Mode Active
                     </Badge>
                   </div>
@@ -470,14 +629,18 @@ const Plans: React.FC = () => {
                 <div className="space-y-4">
                   <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
                     Add more credits to your account instantly. 
-                    {subscription.topup_discount > 0 ? `Enjoy your ${subscription.topup_discount}% discount on all purchases!` : 'Purchase at standard rates.'}
+                    {subscription.topup_discount > 0 ? (
+                      <>Enjoy your {subscription.topup_discount}% discount on all purchases!</>
+                    ) : (
+                      <>Purchase at standard rates.</>
+                    )}
                   </p>
                   <div className="flex flex-wrap justify-center gap-2">
-                    <Badge className="bg-green-500/20 text-green-700 border-green-500/30 text-sm px-3 py-1">
+                    <Badge className="bg-feature-green/20 text-feature-green border-feature-green/30 text-sm px-3 py-1 font-semibold">
                       ✅ Purchase Enabled
                     </Badge>
                     {subscription.topup_discount > 0 && (
-                      <Badge className="bg-primary/20 text-primary border-primary/30 text-sm px-3 py-1">
+                      <Badge className="bg-feature-purple/20 text-feature-purple border-feature-purple/30 text-sm px-3 py-1 font-semibold">
                         🎉 {subscription.topup_discount}% Discount Active
                       </Badge>
                     )}
@@ -502,22 +665,22 @@ const Plans: React.FC = () => {
                 const savings = currentDiscount > 0 ? pkg.price_inr - currentPrice : 0;
 
                 return (
-                  <Card key={pkg.id} className={`card-glass hover:shadow-lg transition-all duration-300 ${isFreePlan ? 'border-orange-500/50 shadow-orange-500/20' : 'border-primary/30 shadow-primary/10'} relative overflow-hidden`}>
+                  <Card key={pkg.id} className={`card-glass hover:shadow-lg transition-all duration-300 ${isFreePlan ? 'border-feature-orange/50 shadow-feature-orange/20' : 'border-primary/30 shadow-primary/10'} relative overflow-hidden`}>
                     {/* Status Indicator */}
                     <div className={`absolute top-0 right-0 px-3 py-1 text-xs font-semibold rounded-bl-lg ${
                       isFreePlan 
-                        ? 'bg-orange-500 text-white' 
+                        ? 'bg-gradient-to-r from-feature-orange to-feature-orange/80 text-white' 
                         : currentDiscount > 0 
-                          ? 'bg-green-500 text-white' 
-                          : 'bg-blue-500 text-white'
+                          ? 'bg-gradient-to-r from-feature-green to-feature-green/80 text-white' 
+                          : 'bg-gradient-to-r from-primary to-primary/80 text-white'
                     }`}>
                       {isFreePlan ? '🔒 Preview' : currentDiscount > 0 ? `💰 ${currentDiscount}% OFF` : '💳 Available'}
                     </div>
                     
                     <CardHeader className="text-center pb-4 pt-8">
                       <div className="flex items-center justify-center gap-2 mb-2">
-                        <CreditCard className="h-5 w-5 text-primary" />
-                        <CardTitle className="text-xl font-bold">{pkg.credits} Credits</CardTitle>
+                        <MinimalisticIcons.Credits className="h-5 w-5 text-primary" />
+                        <CardTitle className="text-xl font-bold"><span className="text-gradient">{pkg.credits} Credits</span></CardTitle>
                       </div>
                       
                       {/* Current Plan Pricing */}
@@ -532,7 +695,7 @@ const Plans: React.FC = () => {
                               <div className="text-sm text-muted-foreground">
                                 Starter plan price
                               </div>
-                              <Badge className="bg-orange-500/20 text-orange-700 border-orange-500/30 text-xs">
+                              <Badge className="bg-feature-orange/20 text-feature-orange border-feature-orange/30 text-xs font-semibold">
                                 🔓 Upgrade to Purchase
                               </Badge>
                             </div>
@@ -543,7 +706,7 @@ const Plans: React.FC = () => {
                                   <div className="text-sm line-through text-muted-foreground">
                                     {formatPrice(pkg.price_inr)}
                                   </div>
-                                  <Badge className="bg-green-500/20 text-green-700 border-green-500/30 text-xs">
+                                  <Badge className="bg-feature-green/20 text-feature-green border-feature-green/30 text-xs font-semibold">
                                     💰 Save {formatPrice(savings)}
                                   </Badge>
                                 </>
@@ -565,16 +728,16 @@ const Plans: React.FC = () => {
                           Pricing by Plan Type
                         </div>
                         <div className="grid grid-cols-2 gap-2 text-xs">
-                          <div className={`flex justify-between p-2 rounded ${userPlanType === 'starter' ? 'bg-blue-500/20 border border-blue-500/30' : 'bg-background/50'}`}>
-                            <span className="text-blue-400 font-medium">Starter:</span>
+                          <div className={`flex justify-between p-2 rounded ${userPlanType === 'starter' ? 'bg-feature-blue/20 border border-feature-blue/30 text-feature-blue' : 'bg-background/50'}`}>
+                            <span className="text-feature-blue font-medium">Starter:</span>
                             <span className="font-semibold">{formatPrice(starterPrice)}</span>
                           </div>
-                          <div className={`flex justify-between p-2 rounded ${userPlanType === 'pro' ? 'bg-purple-500/20 border border-purple-500/30' : 'bg-background/50'}`}>
-                            <span className="text-purple-400 font-medium">Pro:</span>
+                          <div className={`flex justify-between p-2 rounded ${userPlanType === 'pro' ? 'bg-feature-purple/20 border border-feature-purple/30 text-feature-purple' : 'bg-background/50'}`}>
+                            <span className="text-feature-purple font-medium">Pro:</span>
                             <span className="font-semibold">{formatPrice(proPrice)}</span>
                           </div>
-                          <div className={`flex justify-between p-2 rounded ${userPlanType === 'business' ? 'bg-orange-500/20 border border-orange-500/30' : 'bg-background/50'} col-span-2`}>
-                            <span className="text-orange-400 font-medium">Business:</span>
+                          <div className={`flex justify-between p-2 rounded ${userPlanType === 'business' ? 'bg-feature-orange/20 border border-feature-orange/30 text-feature-orange' : 'bg-background/50'} col-span-2`}>
+                            <span className="text-feature-orange font-medium">Business:</span>
                             <span className="font-semibold">{formatPrice(businessPrice)}</span>
                           </div>
                         </div>
@@ -586,18 +749,18 @@ const Plans: React.FC = () => {
                         disabled={isFreePlan}
                         className={`w-full ${
                           isFreePlan 
-                            ? 'bg-orange-500/20 hover:bg-orange-500/30 text-orange-700 border-orange-500/30 cursor-not-allowed' 
+                            ? 'bg-feature-orange/20 hover:bg-feature-orange/30 text-feature-orange border-feature-orange/30 cursor-not-allowed' 
                             : 'btn-hero'
                         }`}
                       >
                         {isFreePlan ? (
                           <>
-                            <AlertTriangle className="mr-2 h-4 w-4" />
+                            <MinimalisticIcons.Warning className="mr-2 h-4 w-4" />
                             Upgrade to Purchase
                           </>
                         ) : (
                           <>
-                            <CreditCard className="mr-2 h-4 w-4" />
+                            <MinimalisticIcons.Credits className="mr-2 h-4 w-4" />
                             Buy {pkg.credits} Credits
                           </>
                         )}
@@ -609,9 +772,9 @@ const Plans: React.FC = () => {
             </div>
             
             {/* Enhanced Top-up Pricing Summary */}
-            <div className="bg-gradient-to-br from-card/80 to-muted/50 p-8 rounded-xl border border-border/50 shadow-lg">
+            <div className="bg-card/50 p-8 rounded-xl border border-border/50 shadow-lg">
               <div className="text-center mb-6">
-                <h3 className="text-2xl font-bold mb-2 bg-gradient-to-r from-primary to-primary-glow bg-clip-text text-transparent">
+                <h3 className="text-2xl font-bold mb-2 text-foreground">
                   🎯 Top-up Discounts by Plan
                 </h3>
                 <p className="text-muted-foreground">
@@ -622,18 +785,18 @@ const Plans: React.FC = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div className={`relative p-4 rounded-lg border transition-all duration-300 ${
                   subscription?.plan_type === 'free' 
-                    ? 'border-orange-500/50 bg-orange-500/10 shadow-orange-500/20 shadow-lg transform scale-105' 
-                    : 'border-border/30 bg-background/50 hover:border-orange-500/30'
+                    ? 'border-feature-orange/50 bg-feature-orange/10 shadow-lg transform scale-105' 
+                    : 'border-border/30 bg-background/50 hover:border-feature-orange/30'
                 }`}>
                   {subscription?.plan_type === 'free' && (
-                    <div className="absolute -top-2 -right-2 bg-orange-500 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center">
+                    <div className="absolute -top-2 -right-2 bg-feature-orange text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center">
                       ✓
                     </div>
                   )}
                   <div className="text-center space-y-2">
-                    <div className="font-bold text-orange-400 text-lg">Free Plan</div>
+                    <div className="font-bold text-feature-orange text-lg">Free Plan</div>
                     <div className="text-muted-foreground text-sm">No top-ups available</div>
-                    <Badge className="bg-orange-500/20 text-orange-700 border-orange-500/30 text-xs">
+                    <Badge className="bg-feature-orange/20 text-feature-orange border-feature-orange/30 text-xs font-semibold">
                       🔒 Upgrade Required
                     </Badge>
                   </div>
@@ -641,18 +804,18 @@ const Plans: React.FC = () => {
                 
                 <div className={`relative p-4 rounded-lg border transition-all duration-300 ${
                   subscription?.plan_type === 'starter' 
-                    ? 'border-blue-500/50 bg-blue-500/10 shadow-blue-500/20 shadow-lg transform scale-105' 
-                    : 'border-border/30 bg-background/50 hover:border-blue-500/30'
+                    ? 'border-feature-blue/50 bg-feature-blue/10 shadow-lg transform scale-105' 
+                    : 'border-border/30 bg-background/50 hover:border-feature-blue/30'
                 }`}>
                   {subscription?.plan_type === 'starter' && (
-                    <div className="absolute -top-2 -right-2 bg-blue-500 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center">
+                    <div className="absolute -top-2 -right-2 bg-feature-blue text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center">
                       ✓
                     </div>
                   )}
                   <div className="text-center space-y-2">
-                    <div className="font-bold text-blue-400 text-lg">Starter Plan</div>
+                    <div className="font-bold text-feature-blue text-lg">Starter Plan</div>
                     <div className="text-muted-foreground text-sm">Standard pricing</div>
-                    <Badge className="bg-blue-500/20 text-blue-700 border-blue-500/30 text-xs">
+                    <Badge className="bg-feature-blue/20 text-feature-blue border-feature-blue/30 text-xs font-semibold">
                       💳 0% Discount
                     </Badge>
                   </div>
@@ -660,38 +823,38 @@ const Plans: React.FC = () => {
                 
                 <div className={`relative p-4 rounded-lg border transition-all duration-300 ${
                   subscription?.plan_type === 'pro' 
-                    ? 'border-purple-500/50 bg-purple-500/10 shadow-purple-500/20 shadow-lg transform scale-105' 
-                    : 'border-border/30 bg-background/50 hover:border-purple-500/30'
+                    ? 'border-feature-purple/50 bg-feature-purple/10 shadow-lg transform scale-105' 
+                    : 'border-border/30 bg-background/50 hover:border-feature-purple/30'
                 }`}>
                   {subscription?.plan_type === 'pro' && (
-                    <div className="absolute -top-2 -right-2 bg-purple-500 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center">
+                    <div className="absolute -top-2 -right-2 bg-feature-purple text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center">
                       ✓
                     </div>
                   )}
                   <div className="text-center space-y-2">
-                    <div className="font-bold text-purple-400 text-lg">Pro Plan</div>
-                    <div className="text-green-600 font-semibold text-sm">10% OFF all top-ups</div>
-                    <Badge className="bg-green-500/20 text-green-700 border-green-500/30 text-xs">
-                      💰 Great Value
+                    <div className="font-bold text-feature-purple text-lg">Pro Plan</div>
+                    <div className="text-feature-green font-semibold text-sm">💰 10% OFF all top-ups</div>
+                    <Badge className="bg-feature-green/20 text-feature-green border-feature-green/30 text-xs font-semibold">
+                      🎆 Great Value
                     </Badge>
                   </div>
                 </div>
                 
                 <div className={`relative p-4 rounded-lg border transition-all duration-300 ${
                   subscription?.plan_type === 'business' 
-                    ? 'border-amber-500/50 bg-amber-500/10 shadow-amber-500/20 shadow-lg transform scale-105' 
-                    : 'border-border/30 bg-background/50 hover:border-amber-500/30'
+                    ? 'border-feature-yellow/50 bg-feature-yellow/10 shadow-lg transform scale-105' 
+                    : 'border-border/30 bg-background/50 hover:border-feature-yellow/30'
                 }`}>
                   {subscription?.plan_type === 'business' && (
-                    <div className="absolute -top-2 -right-2 bg-amber-500 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center">
+                    <div className="absolute -top-2 -right-2 bg-feature-yellow text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center">
                       ✓
                     </div>
                   )}
                   <div className="text-center space-y-2">
-                    <div className="font-bold text-amber-400 text-lg">Business Plan</div>
-                    <div className="text-green-600 font-semibold text-sm">20% OFF all top-ups</div>
-                    <Badge className="bg-green-600/20 text-green-800 border-green-600/30 text-xs">
-                      🎉 Best Savings
+                    <div className="font-bold text-feature-yellow text-lg">Business Plan</div>
+                    <div className="text-feature-green font-semibold text-sm">🎉 20% OFF all top-ups</div>
+                    <Badge className="bg-feature-green/20 text-feature-green border-feature-green/30 text-xs font-semibold">
+                      🚀 Best Savings
                     </Badge>
                   </div>
                 </div>
@@ -699,8 +862,8 @@ const Plans: React.FC = () => {
               
               {/* Savings Calculator for Free Users */}
               {subscription?.plan_type === 'free' && topupPackages.length > 0 && (
-                <div className="mt-6 p-4 bg-gradient-to-r from-primary/10 to-primary-glow/10 border border-primary/20 rounded-lg">
-                  <h4 className="text-lg font-semibold mb-3 text-center">💡 Potential Savings Calculator</h4>
+                <div className="mt-6 p-4 bg-gradient-to-r from-primary/10 to-feature-purple/10 border border-primary/20 rounded-lg">
+                  <h4 className="text-lg font-semibold mb-3 text-center text-gradient">💡 Potential Savings Calculator</h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                     {topupPackages.map((pkg) => {
                       const starterPrice = calculateTopupPrice(pkg.price_inr, 'starter');
@@ -715,11 +878,11 @@ const Plans: React.FC = () => {
                           <div className="space-y-1">
                             <div className="flex justify-between">
                               <span className="text-muted-foreground">Pro Plan:</span>
-                              <span className="text-green-600 font-medium">Save {formatPrice(proSavings)}</span>
+                              <span className="text-feature-green font-medium">💰 Save {formatPrice(proSavings)}</span>
                             </div>
                             <div className="flex justify-between">
                               <span className="text-muted-foreground">Business:</span>
-                              <span className="text-green-600 font-medium">Save {formatPrice(businessSavings)}</span>
+                              <span className="text-feature-green font-medium">🎉 Save {formatPrice(businessSavings)}</span>
                             </div>
                           </div>
                         </div>
@@ -740,20 +903,16 @@ const Plans: React.FC = () => {
         {/* Enhanced CTA for Free Users */}
         {user && subscription?.plan_type === 'free' && (
           <div className="max-w-4xl mx-auto mt-12">
-            <Card className="relative overflow-hidden border-gradient-to-r from-orange-500/30 to-amber-500/30 bg-gradient-to-br from-orange-500/5 to-amber-500/5 shadow-xl">
-              {/* Decorative background */}
-              <div className="absolute inset-0 bg-gradient-to-br from-orange-500/10 via-transparent to-amber-500/10"></div>
-              <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-orange-500/20 to-transparent rounded-full -translate-y-16 translate-x-16"></div>
-              
-              <CardContent className="relative p-8 text-center">
+            <Card className="border-border/50 bg-card/50">
+              <CardContent className="p-8 text-center">
                 <div className="flex justify-center mb-6">
-                  <div className="p-4 bg-gradient-to-br from-orange-500 to-amber-500 rounded-full shadow-lg">
-                    <CreditCard className="h-8 w-8 text-white" />
+                  <div className="p-4 bg-muted/50 rounded-full">
+                    <MinimalisticIcons.Credits className="h-8 w-8 text-muted-foreground" />
                   </div>
                 </div>
                 
-                <h3 className="text-2xl font-bold mb-4 bg-gradient-to-r from-orange-600 to-amber-600 bg-clip-text text-transparent">
-                  🚀 Unlock Premium Credit Features
+                <h3 className="text-2xl font-bold mb-4 text-foreground">
+                  Unlock Premium Credit Features
                 </h3>
                 
                 <p className="text-lg text-muted-foreground mb-6 max-w-2xl mx-auto">
@@ -763,32 +922,32 @@ const Plans: React.FC = () => {
                 
                 {/* Feature comparison */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-                  <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-lg">
-                    <X className="h-6 w-6 text-red-500 mx-auto mb-2" />
-                    <h4 className="font-semibold text-red-600 mb-1">Free Plan</h4>
+                  <div className="p-4 bg-muted/20 border border-border/30 rounded-lg">
+                    <MinimalisticIcons.Close className="h-6 w-6 text-muted-foreground mx-auto mb-2" />
+                    <h4 className="font-semibold text-muted-foreground mb-1">Free Plan</h4>
                     <p className="text-sm text-muted-foreground">No credit purchases</p>
                     <p className="text-sm text-muted-foreground">10 one-time credits</p>
                   </div>
                   
-                  <div className="p-4 bg-blue-500/10 border border-blue-500/20 rounded-lg">
-                    <Zap className="h-6 w-6 text-blue-500 mx-auto mb-2" />
-                    <h4 className="font-semibold text-blue-600 mb-1">Starter Plan</h4>
-                    <p className="text-sm text-green-600">Credit top-ups enabled</p>
-                    <p className="text-sm text-green-600">60 monthly credits</p>
+                  <div className="p-4 bg-muted/20 border border-border/30 rounded-lg">
+                    <MinimalisticIcons.Starter className="h-6 w-6 text-muted-foreground mx-auto mb-2" />
+                    <h4 className="font-semibold text-muted-foreground mb-1">Starter Plan</h4>
+                    <p className="text-sm text-muted-foreground">Credit top-ups enabled</p>
+                    <p className="text-sm text-muted-foreground">60 monthly credits</p>
                   </div>
                   
-                  <div className="p-4 bg-purple-500/10 border border-purple-500/20 rounded-lg">
-                    <Crown className="h-6 w-6 text-purple-500 mx-auto mb-2" />
-                    <h4 className="font-semibold text-purple-600 mb-1">Pro/Business</h4>
-                    <p className="text-sm text-green-600">10-20% top-up discounts</p>
-                    <p className="text-sm text-green-600">120-400 monthly credits</p>
+                  <div className="p-4 bg-muted/20 border border-border/30 rounded-lg">
+                    <MinimalisticIcons.Pro className="h-6 w-6 text-muted-foreground mx-auto mb-2" />
+                    <h4 className="font-semibold text-muted-foreground mb-1">Pro/Business</h4>
+                    <p className="text-sm text-muted-foreground">10-20% top-up discounts</p>
+                    <p className="text-sm text-muted-foreground">120-400 monthly credits</p>
                   </div>
                 </div>
                 
                 {/* Savings showcase */}
                 {topupPackages.length > 0 && (
-                  <div className="bg-gradient-to-r from-green-500/10 to-emerald-500/10 border border-green-500/20 rounded-lg p-4 mb-6">
-                    <h4 className="font-semibold text-green-700 mb-3">💰 Example: What You Could Save</h4>
+                  <div className="bg-muted/20 border border-border/30 rounded-lg p-4 mb-6">
+                    <h4 className="font-semibold text-muted-foreground mb-3">Example: What You Could Save</h4>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
                       {topupPackages.slice(0, 2).map((pkg) => {
                         const starterPrice = calculateTopupPrice(pkg.price_inr, 'starter');
@@ -798,7 +957,7 @@ const Plans: React.FC = () => {
                         return (
                           <div key={pkg.id} className="flex justify-between items-center bg-background/50 p-2 rounded">
                             <span className="text-muted-foreground">{pkg.credits} credits with Business:</span>
-                            <span className="font-semibold text-green-600">Save {formatPrice(maxSavings)}</span>
+                            <span className="font-semibold text-muted-foreground">Save {formatPrice(maxSavings)}</span>
                           </div>
                         );
                       })}
@@ -811,21 +970,21 @@ const Plans: React.FC = () => {
                     onClick={() => document.querySelector('[data-plan="starter"]')?.scrollIntoView({ behavior: 'smooth' })} 
                     className="btn-hero text-lg px-8 py-3"
                   >
-                    <Zap className="mr-2 h-5 w-5" />
+                    <MinimalisticIcons.Starter className="mr-2 h-5 w-5" />
                     View Starter Plan
                   </Button>
                   <Button 
                     onClick={() => document.querySelector('[data-plan="pro"]')?.scrollIntoView({ behavior: 'smooth' })} 
                     variant="outline"
-                    className="border-primary/50 hover:bg-primary/10 text-lg px-8 py-3"
+                    className="border-border/50 hover:bg-muted/10 text-lg px-8 py-3"
                   >
-                    <Crown className="mr-2 h-5 w-5" />
+                    <MinimalisticIcons.Pro className="mr-2 h-5 w-5" />
                     See Pro Benefits
                   </Button>
                 </div>
                 
                 <p className="text-xs text-muted-foreground mt-4">
-                  ✨ All paid plans include bonus credits and monthly renewals
+                  All paid plans include bonus credits and monthly renewals
                 </p>
               </CardContent>
             </Card>
