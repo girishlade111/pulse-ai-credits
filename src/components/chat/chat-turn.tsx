@@ -25,7 +25,7 @@ import {
   Sparkles,
   ThumbsDown,
   ThumbsUp,
-  TriangleAlert,
+  AlertTriangle,
 } from "lucide-react";
 
 interface AttachmentListProps {
@@ -149,7 +149,7 @@ export const ChatTurn: React.FC<ChatTurnProps> = ({
           {failed ? (
             <div className="bubble-agent border-destructive/40 bg-destructive/5">
               <div className="flex items-start gap-3">
-                <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0 text-destructive" />
+                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-destructive" />
                 <div className="min-w-0 flex-1">
                   <p className="title-sm text-destructive">This run failed</p>
                   <p className="body-sm mt-1 break-words text-muted">{reply.error}</p>
