@@ -1,18 +1,8 @@
 import React from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { useAuth } from "@/contexts/AuthContext";
 import { MinimalisticIcons } from "@/components/ui/minimalistic-icons";
-import { LayoutDashboard, LogOut, Settings, Sparkles } from "lucide-react";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { PulseLogo, PulseMark } from "@/components/ui/PulseLogo";
 
 /** Re-export PulseLogo as Wordmark for seamless backward compatibility */
@@ -27,13 +17,7 @@ const LINKS = [
 ];
 
 export const Navbar: React.FC = () => {
-  const { user, profile, credits, signOut } = useAuth();
-  const navigate = useNavigate();
-
-  const handleSignOut = async () => {
-    await signOut();
-    navigate("/");
-  };
+  const { credits } = useWorkspace();
 
   return (
     <nav className="topnav">
@@ -55,79 +39,17 @@ export const Navbar: React.FC = () => {
         </div>
 
         <div className="ml-auto flex items-center gap-3">
-          {user ? (
-            <>
-              {credits && (
-                <Link
-                  to="/plans"
-                  className="pill-badge transition-colors hover:bg-hairline"
-                  title="Available credits"
-                >
-                  <MinimalisticIcons.Credits className="h-3 w-3" />
-                  {credits.current_credits}
-                </Link>
-              )}
-
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <button
-                    className="rounded-full p-0.5 transition-opacity hover:opacity-80"
-                    aria-label="Account menu"
-                  >
-                    <Avatar className="h-8 w-8">
-                      <AvatarImage src={profile?.avatar_url} alt={profile?.full_name} />
-                      <AvatarFallback className="caption-upper bg-canvas-soft text-ink">
-                        {profile?.full_name?.charAt(0) || user.email?.charAt(0) || "U"}
-                      </AvatarFallback>
-                    </Avatar>
-                  </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent className="w-60" align="end">
-                  <DropdownMenuLabel className="font-normal">
-                    <div className="flex flex-col gap-1">
-                      <p className="title-sm text-ink">
-                        {profile?.full_name || "User"}
-                      </p>
-                      <p className="caption text-muted">{user.email}</p>
-                    </div>
-                  </DropdownMenuLabel>
-                  <DropdownMenuSeparator className="bg-hairline" />
-                  <DropdownMenuItem onClick={() => navigate("/dashboard")}>
-                    <LayoutDashboard className="mr-2 h-4 w-4" />
-                    Dashboard
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => navigate("/features")}>
-                    <Sparkles className="mr-2 h-4 w-4" />
-                    Features
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => navigate("/plans")}>
-                    <MinimalisticIcons.Credits className="mr-2 h-4 w-4" />
-                    Upgrade plan
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => navigate("/settings")}>
-                    <Settings className="mr-2 h-4 w-4" />
-                    Settings
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator className="bg-hairline" />
-                  <DropdownMenuItem onClick={handleSignOut}>
-                    <LogOut className="mr-2 h-4 w-4" />
-                    Sign out
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </>
-          ) : (
-            <>
-              <Button
-                variant="ghost"
-                className="hidden sm:inline-flex"
-                onClick={() => navigate("/auth")}
-              >
-                Sign in
-              </Button>
-              <Button onClick={() => navigate("/auth")}>Get started</Button>
-            </>
-          )}
+          <Link
+            to="/plans"
+            className="pill-badge transition-colors hover:bg-hairline"
+            title="Available credits"
+          >
+            <MinimalisticIcons.Credits className="h-3 w-3" />
+            {credits.current_credits}
+          </Link>
+          <Button asChild={undefined}>
+            <Link to="/workspace">Open workspace</Link>
+          </Button>
         </div>
       </div>
     </nav>
