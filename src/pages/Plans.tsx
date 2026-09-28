@@ -606,253 +606,251 @@ const Plans: React.FC = () => {
           )}
 
           {/* top-ups */}
-          {user && (
-            <div className="mt-20">
-              <div className="mb-10 max-w-2xl">
-                <p className="section-label mb-3">Credit top-ups</p>
-                <h2 className="display-md">Top up without changing plan.</h2>
-                <p className="body-md mt-3 text-muted">
-                  {isFreePlan
-                    ? "You are viewing top-ups in preview mode. Upgrade to a paid plan to purchase credits."
-                    : subscription.topup_discount
-                    ? `Your plan takes ${subscription.topup_discount}% off every top-up.`
-                    : "Purchased at standard rates."}
+          <div className="mt-20">
+            <div className="mb-10 max-w-2xl">
+              <p className="section-label mb-3">Credit top-ups</p>
+              <h2 className="display-md">Top up without changing plan.</h2>
+              <p className="body-md mt-3 text-muted">
+                {isFreePlan
+                  ? "You are viewing top-ups in preview mode. Upgrade to a paid plan to purchase credits."
+                  : subscription.topup_discount
+                  ? `Your plan takes ${subscription.topup_discount}% off every top-up.`
+                  : "Purchased at standard rates."}
+              </p>
+            </div>
+
+            {topupPackages.length === 0 ? (
+              <div className="card col-span-full flex flex-col items-center gap-3 p-12 text-center">
+                <p className="title-md">No top-up packages available</p>
+                <p className="body-sm max-w-sm text-muted">
+                  Credit packages could not be loaded. Check your connection
+                  and try again.
                 </p>
+                <Button variant="secondary" onClick={fetchPlansAndPackages}>
+                  Retry
+                </Button>
               </div>
+            ) : (
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+              {topupPackages.map((pkg) => {
+                const starterPrice = calculateTopupPrice(
+                  pkg.price_inr,
+                  "starter"
+                );
+                const proPrice = calculateTopupPrice(pkg.price_inr, "pro");
+                const businessPrice = calculateTopupPrice(
+                  pkg.price_inr,
+                  "business"
+                );
+                const currentPrice = isFreePlan
+                  ? starterPrice
+                  : calculateTopupPrice(pkg.price_inr, userPlanType);
+                const currentDiscount =
+                  userPlanType === "business"
+                    ? 20
+                    : userPlanType === "pro"
+                    ? 10
+                    : 0;
+                const savings = pkg.price_inr - currentPrice;
 
-              {topupPackages.length === 0 ? (
-                <div className="card col-span-full flex flex-col items-center gap-3 p-12 text-center">
-                  <p className="title-md">No top-up packages available</p>
-                  <p className="body-sm max-w-sm text-muted">
-                    Credit packages could not be loaded. Check your connection
-                    and try again.
-                  </p>
-                  <Button variant="secondary" onClick={fetchPlansAndPackages}>
-                    Retry
-                  </Button>
-                </div>
-              ) : (
-              <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                {topupPackages.map((pkg) => {
-                  const starterPrice = calculateTopupPrice(
-                    pkg.price_inr,
-                    "starter"
-                  );
-                  const proPrice = calculateTopupPrice(pkg.price_inr, "pro");
-                  const businessPrice = calculateTopupPrice(
-                    pkg.price_inr,
-                    "business"
-                  );
-                  const currentPrice = isFreePlan
-                    ? starterPrice
-                    : calculateTopupPrice(pkg.price_inr, userPlanType);
-                  const currentDiscount =
-                    userPlanType === "business"
-                      ? 20
-                      : userPlanType === "pro"
-                      ? 10
-                      : 0;
-                  const savings = pkg.price_inr - currentPrice;
-
-                  return (
-                    <article
-                      key={pkg.id}
-                      className="card p-8"
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <p className="display-sm">
-                          {pkg.credits} credits
-                        </p>
-                        {isFreePlan ? (
-                          <span className="pill-badge">Preview</span>
-                        ) : currentDiscount > 0 ? (
-                          <span className="pill-badge">
-                            {currentDiscount}% off
-                          </span>
-                        ) : (
-                          <span className="pill-badge">Available</span>
-                        )}
-                      </div>
-
-                      <p className="display-md mt-6">{formatPrice(currentPrice)}</p>
-                      {isFreePlan ? (
-                        <p className="body-sm mt-1 text-muted">
-                          Starter plan price
-                        </p>
-                      ) : currentDiscount > 0 ? (
-                        <p className="body-sm mt-1 text-muted">
-                          <span className="line-through">
-                            {formatPrice(pkg.price_inr)}
-                          </span>{" "}
-                          · save {formatPrice(savings)}
-                        </p>
-                      ) : (
-                        <p className="body-sm mt-1 text-muted">
-                          Standard pricing
-                        </p>
-                      )}
-
-                      {/* price per credit by plan */}
-                      <dl className="mt-6 space-y-px overflow-hidden rounded-md border border-hairline bg-hairline">
-                        {[
-                          { key: "starter", label: "Starter", price: starterPrice },
-                          { key: "pro", label: "Pro", price: proPrice },
-                          { key: "business", label: "Business", price: businessPrice },
-                        ].map((row) => {
-                          const active = userPlanType === row.key;
-                          return (
-                            <div
-                              key={row.key}
-                              className={cn(
-                                "flex items-center justify-between gap-3 px-4 py-2.5",
-                                active ? "bg-ink text-canvas" : "bg-card"
-                              )}
-                            >
-                              <dt className="body-sm">
-                                {row.label}
-                                {active && (
-                                  <span className="caption-upper ml-2 opacity-60">
-                                    Yours
-                                  </span>
-                                )}
-                              </dt>
-                              <dd className="code tabular-nums">
-                                {formatPrice(row.price)}
-                              </dd>
-                            </div>
-                          );
-                        })}
-                      </dl>
-
-                      <Button
-                        onClick={() => handleTopup(pkg)}
-                        disabled={isFreePlan}
-                        variant={isFreePlan ? "outline" : "default"}
-                        className="mt-6 w-full"
-                      >
-                        {isFreePlan ? (
-                          <>
-                            <Lock />
-                            Upgrade to purchase
-                          </>
-                        ) : (
-                          `Buy ${pkg.credits} credits`
-                        )}
-                      </Button>
-                    </article>
-                  );
-                })}
-              </div>
-              )}
-
-              {/* discount matrix */}
-              <div className="mt-12">
-                <p className="section-label mb-6">Top-up discounts by plan</p>
-                <div className="grid grid-cols-1 gap-px overflow-hidden rounded-lg border border-hairline bg-hairline sm:grid-cols-2 lg:grid-cols-4">
-                  {[
-                    {
-                      name: "Free Plan",
-                      line: "No top-ups available",
-                      badge: "Upgrade required",
-                      active: userPlanType === "free",
-                    },
-                    {
-                      name: "Starter Plan",
-                      line: "Standard pricing",
-                      badge: "0% discount",
-                      active: userPlanType === "starter",
-                    },
-                    {
-                      name: "Pro Plan",
-                      line: "10% off all top-ups",
-                      badge: "Good value",
-                      active: userPlanType === "pro",
-                    },
-                    {
-                      name: "Business Plan",
-                      line: "20% off all top-ups",
-                      badge: "Best savings",
-                      active: userPlanType === "business",
-                    },
-                  ].map((row) => (
-                    <div
-                      key={row.name}
-                      className={cn(
-                        "flex flex-col gap-2 p-6",
-                        row.active ? "bg-ink text-canvas" : "bg-card"
-                      )}
-                    >
-                      <div className="flex items-center justify-between gap-3">
-                        <p className="title-md">{row.name}</p>
-                        {row.active && <Check className="h-4 w-4" />}
-                      </div>
-                      <p
-                        className={cn(
-                          "body-sm",
-                          row.active ? "text-canvas/70" : "text-muted"
-                        )}
-                      >
-                        {row.line}
+                return (
+                  <article
+                    key={pkg.id}
+                    className="card p-8"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <p className="display-sm">
+                        {pkg.credits} credits
                       </p>
-                      <span
-                        className={cn(
-                          "caption-upper mt-2 self-start rounded-full px-2.5 py-1",
-                          row.active
-                            ? "border border-white/25"
-                            : "bg-surface-strong text-ink"
-                        )}
-                      >
-                        {row.badge}
-                      </span>
+                      {isFreePlan ? (
+                        <span className="pill-badge">Preview</span>
+                      ) : currentDiscount > 0 ? (
+                        <span className="pill-badge">
+                          {currentDiscount}% off
+                        </span>
+                      ) : (
+                        <span className="pill-badge">Available</span>
+                      )}
                     </div>
-                  ))}
-                </div>
-              </div>
 
-              {/* free-user savings calculator */}
-              {isFreePlan && topupPackages.length > 0 && (
-                <div className="card mt-12 p-8">
-                  <p className="section-label mb-6">What upgrading would save</p>
-                  <div className="grid grid-cols-1 gap-px overflow-hidden rounded-md border border-hairline bg-hairline md:grid-cols-2">
-                    {topupPackages.map((pkg) => {
-                      const proSavings =
-                        pkg.price_inr - calculateTopupPrice(pkg.price_inr, "pro");
-                      const businessSavings =
-                        pkg.price_inr -
-                        calculateTopupPrice(pkg.price_inr, "business");
-                      return (
-                        <div key={pkg.id} className="bg-card p-5">
-                          <p className="title-sm">
-                            {pkg.credits} credit package
-                          </p>
-                          <div className="mt-3 space-y-1.5">
-                            <div className="flex items-center justify-between gap-3">
-                              <span className="body-sm text-muted">Pro plan</span>
-                              <span className="code text-success">
-                                save {formatPrice(proSavings)}
-                              </span>
-                            </div>
-                            <div className="flex items-center justify-between gap-3">
-                              <span className="body-sm text-muted">Business</span>
-                              <span className="code text-success">
-                                save {formatPrice(businessSavings)}
-                              </span>
-                            </div>
+                    <p className="display-md mt-6">{formatPrice(currentPrice)}</p>
+                    {isFreePlan ? (
+                      <p className="body-sm mt-1 text-muted">
+                        Starter plan price
+                      </p>
+                    ) : currentDiscount > 0 ? (
+                      <p className="body-sm mt-1 text-muted">
+                        <span className="line-through">
+                          {formatPrice(pkg.price_inr)}
+                        </span>{" "}
+                        · save {formatPrice(savings)}
+                      </p>
+                    ) : (
+                      <p className="body-sm mt-1 text-muted">
+                        Standard pricing
+                      </p>
+                    )}
+
+                    {/* price per credit by plan */}
+                    <dl className="mt-6 space-y-px overflow-hidden rounded-md border border-hairline bg-hairline">
+                      {[
+                        { key: "starter", label: "Starter", price: starterPrice },
+                        { key: "pro", label: "Pro", price: proPrice },
+                        { key: "business", label: "Business", price: businessPrice },
+                      ].map((row) => {
+                        const active = userPlanType === row.key;
+                        return (
+                          <div
+                            key={row.key}
+                            className={cn(
+                              "flex items-center justify-between gap-3 px-4 py-2.5",
+                              active ? "bg-ink text-canvas" : "bg-card"
+                            )}
+                          >
+                            <dt className="body-sm">
+                              {row.label}
+                              {active && (
+                                <span className="caption-upper ml-2 opacity-60">
+                                  Yours
+                                </span>
+                              )}
+                            </dt>
+                            <dd className="code tabular-nums">
+                              {formatPrice(row.price)}
+                            </dd>
+                          </div>
+                        );
+                      })}
+                    </dl>
+
+                    <Button
+                      onClick={() => handleTopup(pkg)}
+                      disabled={isFreePlan}
+                      variant={isFreePlan ? "outline" : "default"}
+                      className="mt-6 w-full"
+                    >
+                      {isFreePlan ? (
+                        <>
+                          <Lock />
+                          Upgrade to purchase
+                        </>
+                      ) : (
+                        `Buy ${pkg.credits} credits`
+                      )}
+                    </Button>
+                  </article>
+                );
+              })}
+            </div>
+            )}
+
+            {/* discount matrix */}
+            <div className="mt-12">
+              <p className="section-label mb-6">Top-up discounts by plan</p>
+              <div className="grid grid-cols-1 gap-px overflow-hidden rounded-lg border border-hairline bg-hairline sm:grid-cols-2 lg:grid-cols-4">
+                {[
+                  {
+                    name: "Free Plan",
+                    line: "No top-ups available",
+                    badge: "Upgrade required",
+                    active: userPlanType === "free",
+                  },
+                  {
+                    name: "Starter Plan",
+                    line: "Standard pricing",
+                    badge: "0% discount",
+                    active: userPlanType === "starter",
+                  },
+                  {
+                    name: "Pro Plan",
+                    line: "10% off all top-ups",
+                    badge: "Good value",
+                    active: userPlanType === "pro",
+                  },
+                  {
+                    name: "Business Plan",
+                    line: "20% off all top-ups",
+                    badge: "Best savings",
+                    active: userPlanType === "business",
+                  },
+                ].map((row) => (
+                  <div
+                    key={row.name}
+                    className={cn(
+                      "flex flex-col gap-2 p-6",
+                      row.active ? "bg-ink text-canvas" : "bg-card"
+                    )}
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="title-md">{row.name}</p>
+                      {row.active && <Check className="h-4 w-4" />}
+                    </div>
+                    <p
+                      className={cn(
+                        "body-sm",
+                        row.active ? "text-canvas/70" : "text-muted"
+                      )}
+                    >
+                      {row.line}
+                    </p>
+                    <span
+                      className={cn(
+                        "caption-upper mt-2 self-start rounded-full px-2.5 py-1",
+                        row.active
+                          ? "border border-white/25"
+                          : "bg-surface-strong text-ink"
+                      )}
+                    >
+                      {row.badge}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* free-user savings calculator */}
+            {isFreePlan && topupPackages.length > 0 && (
+              <div className="card mt-12 p-8">
+                <p className="section-label mb-6">What upgrading would save</p>
+                <div className="grid grid-cols-1 gap-px overflow-hidden rounded-md border border-hairline bg-hairline md:grid-cols-2">
+                  {topupPackages.map((pkg) => {
+                    const proSavings =
+                      pkg.price_inr - calculateTopupPrice(pkg.price_inr, "pro");
+                    const businessSavings =
+                      pkg.price_inr -
+                      calculateTopupPrice(pkg.price_inr, "business");
+                    return (
+                      <div key={pkg.id} className="bg-card p-5">
+                        <p className="title-sm">
+                          {pkg.credits} credit package
+                        </p>
+                        <div className="mt-3 space-y-1.5">
+                          <div className="flex items-center justify-between gap-3">
+                            <span className="body-sm text-muted">Pro plan</span>
+                            <span className="code text-success">
+                              save {formatPrice(proSavings)}
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between gap-3">
+                            <span className="body-sm text-muted">Business</span>
+                            <span className="code text-success">
+                              save {formatPrice(businessSavings)}
+                            </span>
                           </div>
                         </div>
-                      );
-                    })}
-                  </div>
-                  <p className="body-sm mt-5 text-muted-soft">
-                    Compared with Starter plan pricing on the same package.
-                  </p>
+                      </div>
+                    );
+                  })}
                 </div>
-              )}
-            </div>
-          )}
+                <p className="body-sm mt-5 text-muted-soft">
+                  Compared with Starter plan pricing on the same package.
+                </p>
+              </div>
+            )}
+          </div>
 
           {/* free-user CTA */}
-          {user && isFreePlan && (
+          {isFreePlan && (
             <section className="mt-20">
               <div className="card overflow-hidden">
                 <div className="grid grid-cols-1 gap-px bg-hairline md:grid-cols-3">
