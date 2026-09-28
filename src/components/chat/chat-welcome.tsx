@@ -14,38 +14,28 @@ interface ChatWelcomeProps {
   modeId: string;
   onModeChange: (id: string) => void;
   onPickSuggestion: (prompt: string) => void;
-  /** In the docked chat view the hero is compact; on the landing page it leads. */
-  compact?: boolean;
 }
 
+/**
+ * No hero here. The landing view already carries the "Ask, research, or
+ * generate." headline in the workspace header, and repeating it here was
+ * printing the same title twice on one screen.
+ */
 export const ChatWelcome: React.FC<ChatWelcomeProps> = ({
   modeId,
   onModeChange,
   onPickSuggestion,
-  compact,
 }) => {
   const mode = getMode(modeId);
 
   return (
-    <div className={cn(compact ? "py-6" : "py-4")}>
-      {!compact && (
-        <div className="mb-8 text-center">
-          <h2 className="display-md">Ask, research, or generate.</h2>
-          <p className="body-md mx-auto mt-2 max-w-xl text-muted">
-            Every run opens a timeline. You can watch the credits go as it
-            happens.
-          </p>
-        </div>
-      )}
-
-      {compact && (
-        <div className="mb-8 text-center">
-          <h2 className="display-sm">What are we working on?</h2>
-          <p className="body-sm mt-2 text-muted">
-            Pick a tool, then ask. Follow-ups keep the whole thread in context.
-          </p>
-        </div>
-      )}
+    <div className="py-2">
+      <div className="mb-8 text-center">
+        <h2 className="display-sm">What are we working on?</h2>
+        <p className="body-sm mt-2 text-muted">
+          Pick a tool, then ask. Follow-ups keep the whole thread in context.
+        </p>
+      </div>
 
       <div className="mb-4 flex flex-wrap justify-center gap-1.5">
         {CHAT_MODES.map((option) => {

@@ -291,7 +291,7 @@ export const SearchInterface: React.FC<SearchInterfaceProps> = ({ onResultsChang
         setBusy(false);
       }
     },
-    [spend]
+    [setChatMode, spend]
   );
 
   const send = React.useCallback(
@@ -514,13 +514,19 @@ export const SearchInterface: React.FC<SearchInterfaceProps> = ({ onResultsChang
   const transcript = (
     <div
       className={cn(
-        "mx-auto w-full space-y-8 px-4 py-6 sm:px-6",
-        chatMode ? "max-w-3xl" : "max-w-2xl"
+        "mx-auto w-full px-4 py-6 sm:px-6",
+        chatMode ? "max-w-3xl" : "max-w-2xl",
+        // An empty chat centres in the shell; a real transcript stacks from the
+        // top so the newest turn stays next to the composer.
+        turns.length === 0
+          ? chatMode
+            ? "flex min-h-full flex-col justify-center"
+            : "space-y-8"
+          : "space-y-8"
       )}
     >
       {turns.length === 0 ? (
         <ChatWelcome
-          compact={chatMode}
           modeId={modeId}
           onModeChange={setModeId}
           onPickSuggestion={pickSuggestion}

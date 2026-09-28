@@ -47,9 +47,11 @@ const main = async () => {
   await composer.waitFor({ state: "visible", timeout: 15000 });
   check("composer renders on landing", true);
 
-  // A prompt that forces a long, list-shaped markdown answer.
+  // A prompt that invites structured markdown. Deliberately avoids asking the
+  // model to *explain* markdown, which makes it echo syntax verbatim — that is
+  // content, not a rendering leak.
   await composer.fill(
-    "Write a detailed markdown report titled 'Vector databases' with an executive summary and at least five bullet points. Include **bold** lead-ins, a numbered list, a blockquote, and a fenced code block."
+    "Write a detailed engineering report on vector databases. Include an executive summary, at least five findings, a numbered list of deployment steps, a short quotation, and a code example in JavaScript."
   );
   await composer.press("Enter");
 
@@ -62,7 +64,7 @@ const main = async () => {
   await userBubble.waitFor({ state: "visible", timeout: 10000 });
   check(
     "prompt renders in transcript",
-    (await userBubble.innerText()).includes("Vector databases")
+    /vector databases/i.test(await userBubble.innerText())
   );
 
   const reply = page.locator(".bubble-agent").first();
@@ -91,9 +93,12 @@ const main = async () => {
   check("markdown code block rendered", (await reply.locator("pre code").count()) > 0);
   check("markdown blockquote rendered", (await reply.locator("blockquote").count()) > 0);
   check("markdown headings rendered", (await reply.locator("h1, h2, h3").count()) > 0);
-  const leftoverMarkers = await reply.evaluate(
-    (el) => (el.textContent.match(/\*\*|^#{1,6} |^• /gm) || []).length
-  );
+  const leftoverMarkers = await reply.evaluate((el) => {
+    // Fenced code keeps its markers literally, so exclude it before counting.
+    const clone = el.cloneNode(true);
+    clone.querySelectorAll("pre").forEach((node) => node.remove());
+    return (clone.textContent?.match(/\*\*|^#{1,6} |^• /gm) || []).length;
+  });
   check("no raw markdown markers left in output", leftoverMarkers === 0, `${leftoverMarkers} leftover`);
 
   await waitStreamingDone(0);
@@ -185,10 +190,10 @@ const main = async () => {
 
   /* ---------------------------------------------------------- 6. history UI */
   const historyItem = page.locator("aside[aria-label='Chat history'] li button", {
-    hasText: "Vector databases",
+    hasText: /vector databases/i,
   });
   check("chat is listed in history", (await historyItem.count()) > 0);
-  check("history entry is titled from the first prompt", (await historyItem.first().innerText()).includes("Vector databases"));
+  check("history entry is titled from the first prompt", /vector databases/i.test(await historyItem.first().innerText()));
 
   /* --------------------------------------------------------- 7. history search */
   await page.getByPlaceholder("Search chats").fill("vector");
@@ -229,7 +234,7 @@ const main = async () => {
     .waitFor({ state: "visible", timeout: 15000 });
   check("chat view is restored after a reload", true);
   const persistedItems = await page
-    .locator("aside[aria-label='Chat history'] li button", { hasText: "Vector databases" })
+    .locator("aside[aria-label='Chat history'] li button", { hasText: /vector databases/i })
     .count();
   check("history survives a reload", persistedItems > 0, `${persistedItems} entry`);
 
