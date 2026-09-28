@@ -22,10 +22,10 @@ const COLUMNS: { heading: string; links: { label: string; to: string }[] }[] = [
     ],
   },
   {
-    heading: "Account",
+    heading: "Workspace",
     links: [
-      { label: "Sign in", to: "/auth" },
-      { label: "Get started", to: "/auth" },
+      { label: "Open workspace", to: "/workspace" },
+      { label: "Dashboard", to: "/dashboard" },
       { label: "Settings", to: "/settings" },
     ],
   },

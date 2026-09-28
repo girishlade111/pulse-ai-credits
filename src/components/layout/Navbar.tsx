@@ -47,7 +47,7 @@ export const Navbar: React.FC = () => {
             <MinimalisticIcons.Credits className="h-3 w-3" />
             {credits.current_credits}
           </Link>
-          <Button asChild={undefined}>
+          <Button asChild>
             <Link to="/workspace">Open workspace</Link>
           </Button>
         </div>
