@@ -1,26 +1,19 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Footer } from "@/components/layout/Footer";
 import { toast } from "sonner";
 import {
-  AlertTriangle,
   ArrowLeft,
+  CreditCard,
   HelpCircle,
-  Loader2,
-  LogOut,
+  RotateCcw,
   Save,
-  Trash2,
   Type,
-  User,
-  UserPlus,
 } from "lucide-react";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
 
 const FONT_SIZE_KEY = "pulseai-font-size";
 
@@ -32,14 +25,10 @@ const SIZES = [
 ];
 
 const Settings = () => {
-  const { user, profile, signOut, refreshUserData } = useAuth();
+  const { credits, subscription, reset } = useWorkspace();
   const navigate = useNavigate();
 
-  const [fullName, setFullName] = useState(profile?.full_name ?? "");
-  const [email, setEmail] = useState(user?.email ?? "");
   const [fontSize, setFontSize] = useState("medium");
-  const [deleteConfirmation, setDeleteConfirmation] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
 
   // Load persisted preferences
   React.useEffect(() => {
@@ -48,11 +37,6 @@ const Settings = () => {
       setFontSize(saved);
     }
   }, []);
-
-  React.useEffect(() => {
-    if (profile?.full_name) setFullName(profile.full_name);
-    if (user?.email) setEmail(user.email);
-  }, [profile, user]);
 
   // Reading size applies live so the choice is legible before saving
   React.useEffect(() => {
@@ -82,63 +66,9 @@ const Settings = () => {
     }
   };
 
-  const handleSaveProfile = async () => {
-    setIsLoading(true);
-    try {
-      if (!user) {
-        toast.error("User not found");
-        return;
-      }
-
-      const { error } = await supabase
-        .from("profiles")
-        .update({ full_name: fullName })
-        .eq("user_id", user.id);
-
-      if (error) {
-        console.error("Profile update error:", error);
-        toast.error("Failed to update profile");
-        return;
-      }
-
-      await refreshUserData();
-      toast.success("Profile updated");
-    } catch (error) {
-      console.error("Error updating profile:", error);
-      toast.error("Failed to update profile");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleSignOutAllSessions = async () => {
-    try {
-      await signOut();
-      toast.success("Signed out of all sessions");
-      navigate("/");
-    } catch {
-      toast.error("Failed to sign out of all sessions");
-    }
-  };
-
-  const handleDeleteAccount = async () => {
-    if (deleteConfirmation !== "DELETE") {
-      toast.error("Please type DELETE to confirm account deletion");
-      return;
-    }
-    try {
-      // TODO: Implement account deletion logic
-      toast.success("Account deletion request submitted");
-      navigate("/");
-    } catch {
-      toast.error("Failed to delete account");
-    }
-  };
-
-  const handleReferFriend = () => {
-    const referralLink = `${window.location.origin}/?ref=${user?.id}`;
-    navigator.clipboard.writeText(referralLink);
-    toast.success("Referral link copied to clipboard");
+  const handleResetWorkspace = () => {
+    reset();
+    toast.success("Local workspace reset to ten credits");
   };
 
   return (
@@ -156,45 +86,39 @@ const Settings = () => {
             </Button>
             <div>
               <p className="section-label mb-3">Settings</p>
-              <h1 className="display-md">Account settings</h1>
+              <h1 className="display-md">Workspace settings</h1>
             </div>
           </div>
 
-          {/* profile */}
+          {/* credits */}
           <section className="card p-6">
             <div className="flex items-center gap-3 border-b border-hairline pb-5">
-              <User className="h-4 w-4 text-ink" />
+              <CreditCard className="h-4 w-4 text-ink" />
               <div>
-                <h2 className="title-md">Profile</h2>
-                <p className="body-sm text-muted">Your display name and account identity.</p>
-              </div>
-            </div>
-            <div className="mt-6 space-y-5">
-              <div className="space-y-2">
-                <Label htmlFor="fullName">Full name</Label>
-                <Input
-                  id="fullName"
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  placeholder="Your name"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="email">Email address</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={email}
-                  readOnly
-                  disabled
-                />
+                <h2 className="title-md">Credits</h2>
                 <p className="body-sm text-muted">
-                  Email cannot be changed here. Contact support to update it.
+                  Your balance and plan, stored in this browser.
                 </p>
               </div>
-              <Button onClick={handleSaveProfile} disabled={isLoading}>
-                {isLoading ? <Loader2 className="animate-spin" /> : <Save />}
-                Save changes
+            </div>
+            <dl className="mt-6 grid grid-cols-2 gap-6">
+              <div>
+                <dt className="section-label">Available</dt>
+                <dd className="display-sm mt-2">{credits.current_credits}</dd>
+              </div>
+              <div>
+                <dt className="section-label">Plan</dt>
+                <dd className="display-sm mt-2">{subscription.name}</dd>
+              </div>
+            </dl>
+            <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+              <Button variant="secondary" className="flex-1" onClick={() => navigate("/plans")}>
+                <CreditCard />
+                Change plan
+              </Button>
+              <Button variant="outline" className="flex-1" onClick={handleResetWorkspace}>
+                <RotateCcw />
+                Reset local workspace
               </Button>
             </div>
           </section>
@@ -237,20 +161,16 @@ const Settings = () => {
             </Button>
           </section>
 
-          {/* social & support */}
+          {/* support */}
           <section className="card mt-6 p-6">
             <div className="flex items-center gap-3 border-b border-hairline pb-5">
-              <UserPlus className="h-4 w-4 text-ink" />
+              <HelpCircle className="h-4 w-4 text-ink" />
               <div>
-                <h2 className="title-md">Social &amp; support</h2>
-                <p className="body-sm text-muted">Invite someone, or reach a human.</p>
+                <h2 className="title-md">Support</h2>
+                <p className="body-sm text-muted">Reach a human, or read the credit system.</p>
               </div>
             </div>
             <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-              <Button variant="outline" className="flex-1" onClick={handleReferFriend}>
-                <UserPlus />
-                Refer a friend
-              </Button>
               <Button
                 variant="outline"
                 className="flex-1"
@@ -259,83 +179,11 @@ const Settings = () => {
                 <HelpCircle />
                 Contact support
               </Button>
+              <Button variant="outline" className="flex-1" onClick={() => navigate("/plans")}>
+                <CreditCard />
+                How credits work
+              </Button>
             </div>
-          </section>
-
-          {/* security */}
-          <section className="card mt-6 p-6">
-            <div className="flex items-center gap-3 border-b border-hairline pb-5">
-              <LogOut className="h-4 w-4 text-ink" />
-              <div>
-                <h2 className="title-md">Account security</h2>
-                <p className="body-sm text-muted">End every active session.</p>
-              </div>
-            </div>
-            <Button variant="outline" className="mt-6" onClick={handleSignOutAllSessions}>
-              <LogOut />
-              Sign out of all sessions
-            </Button>
-          </section>
-
-          {/* danger zone */}
-          <section className="card mt-6 border-destructive p-6">
-            <div className="flex items-center gap-3 border-b border-destructive/30 pb-5">
-              <AlertTriangle className="h-4 w-4 text-destructive" />
-              <div>
-                <h2 className="title-md text-destructive">Danger zone</h2>
-                <p className="body-sm text-muted">
-                  Irreversible actions that permanently affect your account.
-                </p>
-              </div>
-            </div>
-            <Dialog>
-              <DialogTrigger asChild>
-                <Button variant="destructive" className="mt-6">
-                  <Trash2 />
-                  Delete account
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle className="flex items-center gap-2 text-destructive">
-                    <AlertTriangle className="h-4 w-4" />
-                    Delete account
-                  </DialogTitle>
-                  <DialogDescription>
-                    This cannot be undone. Your account and all associated data
-                    will be permanently removed.
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="deleteConfirm">
-                      Type <span className="code">DELETE</span> to confirm
-                    </Label>
-                    <Input
-                      id="deleteConfirm"
-                      value={deleteConfirmation}
-                      onChange={(e) => setDeleteConfirmation(e.target.value)}
-                      placeholder="DELETE"
-                    />
-                  </div>
-                  <div className="flex gap-3">
-                    <Button
-                      variant="destructive"
-                      onClick={handleDeleteAccount}
-                      disabled={deleteConfirmation !== "DELETE"}
-                      className="flex-1"
-                    >
-                      Delete account
-                    </Button>
-                    <DialogTrigger asChild>
-                      <Button variant="outline" className="flex-1">
-                        Cancel
-                      </Button>
-                    </DialogTrigger>
-                  </div>
-                </div>
-              </DialogContent>
-            </Dialog>
           </section>
         </div>
       </section>
