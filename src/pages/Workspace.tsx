@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useCallback, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { SearchInterface } from "@/components/SearchInterface";
@@ -15,23 +15,27 @@ const Workspace: React.FC<WorkspaceProps> = ({ onChatModeChange }) => {
   const navigate = useNavigate();
   const [chatOpen, setChatOpen] = useState(false);
 
-  const handleResultsChange = (hasResults: boolean) => {
-    setChatOpen(hasResults);
-    onChatModeChange?.(hasResults);
-  };
+  // Stable identity: SearchInterface reports chat mode from an effect, and a
+  // fresh function every render would re-fire that effect on every keystroke.
+  const handleResultsChange = useCallback((hasResults: boolean) => {
+    setChatOpen((previous) => {
+      if (previous === hasResults) return previous;
+      onChatModeChange?.(hasResults);
+      return hasResults;
+    });
+  }, [onChatModeChange]);
 
-  // The composer must stay mounted across the workspace -> chat-mode switch,
-  // otherwise React remounts it and the transcript is lost. Both wrappers are
-  // therefore always rendered; only their classes change.
   return (
     <main
       className={cn(
-        chatOpen
-          ? "h-dvh overflow-hidden bg-canvas"
-          : "min-h-[calc(100dvh-4rem)] bg-canvas"
+        "bg-canvas",
+        // Only the chat shell is a fixed-height, non-scrolling viewport. In
+        // landing mode the page scrolls normally, so the welcome screen and
+        // tool picker remain reachable on short windows.
+        chatOpen ? "h-dvh overflow-hidden" : "min-h-[calc(100dvh-4rem)]"
       )}
     >
-      <div className={cn("page pb-16 pt-10", chatOpen && "hidden")}>
+      <div className={cn("page pb-6 pt-10", chatOpen && "hidden")}>
         <div className="mb-8 flex flex-col gap-6 border-b border-hairline pb-8 md:flex-row md:items-end md:justify-between">
           <div>
             <p className="section-label mb-3">Workspace</p>
@@ -54,9 +58,7 @@ const Workspace: React.FC<WorkspaceProps> = ({ onChatModeChange }) => {
         </div>
       </div>
 
-      <div className={cn(!chatOpen && "page")}>
-        <SearchInterface onResultsChange={handleResultsChange} />
-      </div>
+      <SearchInterface onResultsChange={handleResultsChange} />
     </main>
   );
 };

@@ -302,29 +302,46 @@
   .app-sidebar {
     @apply fixed left-0 top-0 z-50 hidden h-full w-64 flex-col border-r border-hairline bg-canvas-soft lg:flex;
   }
+
+  /* ==========================================================================
+     CHAT SCROLL CHAIN
+     Every level between the fixed-height root and the transcript carries
+     `min-h-0`. A flex item defaults to `min-height: auto`, which refuses to
+     shrink below its content — without this the transcript grows instead of
+     scrolling, the composer is pushed out of the viewport, and the page
+     cannot scroll either because the shell is `overflow-hidden`.
+     `overscroll-contain` stops the scroll chain from leaking to the document.
+     ========================================================================== */
   .app-scroll {
-    @apply flex-1 overflow-y-auto;
+    @apply min-h-0 flex-1 overflow-y-auto overscroll-contain;
   }
   .composer {
-    @apply border-t border-hairline bg-canvas-soft;
+    @apply shrink-0 border-t border-hairline bg-canvas-soft;
+  }
+  .chat-sidebar {
+    @apply fixed left-0 top-0 z-50 flex h-full w-64 -translate-x-full flex-col border-r border-hairline bg-canvas-soft transition-transform duration-200 lg:translate-x-0;
   }
   .chat-turn {
     @apply space-y-6;
   }
   .bubble-user {
-    @apply max-w-2xl rounded-lg border border-hairline bg-card px-4 py-3;
+    @apply max-w-[85%] rounded-lg border border-hairline bg-card px-4 py-3;
   }
   .bubble-agent {
-    @apply rounded-lg border border-hairline bg-card px-5 py-4;
+    @apply rounded-lg border border-hairline bg-card px-4 py-4 sm:px-5;
   }
   .agent-avatar {
     @apply flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-hairline bg-canvas-soft;
   }
   .composer-box {
-    @apply relative flex items-center rounded-lg border border-hairline-strong bg-card transition-colors;
+    @apply relative flex items-start rounded-lg border border-hairline-strong bg-card transition-colors;
   }
   .composer-input {
     @apply h-12 w-full flex-1 border-0 bg-transparent px-4 text-base text-ink outline-none placeholder:text-muted-soft focus-visible:ring-0 sm:h-14 sm:text-base;
+  }
+  /* Auto-growing composer field: 1 line to 220px, then scrolls internally. */
+  .composer-textarea {
+    @apply max-h-[220px] min-h-[2.75rem] w-full flex-1 resize-none border-0 bg-transparent px-3 py-3 text-base leading-relaxed text-ink outline-none placeholder:text-muted-soft focus-visible:ring-0 sm:px-4 sm:min-h-[3.25rem] sm:text-base;
   }
   .icon-btn {
     @apply inline-flex h-8 w-8 items-center justify-center rounded-md border-0 bg-transparent p-0 text-muted-foreground transition-colors hover:bg-canvas-soft hover:text-ink;
@@ -350,6 +367,88 @@
     border-radius: 9999px;
     border: 2px solid transparent;
     background-clip: content-box;
+  }
+
+  /* ==========================================================================
+     MARKDOWN — assistant replies
+     Sized off the transcript's own measure so a long answer stays readable:
+     15px running text, tight leading, generous block rhythm.
+     ========================================================================== */
+  .md {
+    @apply text-[15px] leading-[1.65] text-body;
+    word-break: break-word;
+  }
+  .md > *:first-child {
+    margin-top: 0;
+  }
+  .md > *:last-child {
+    margin-bottom: 0;
+  }
+  .md-p {
+    @apply my-3 whitespace-pre-wrap;
+  }
+  .md-heading {
+    @apply mt-6 font-semibold leading-snug text-ink;
+  }
+  .md-h1 {
+    @apply text-xl tracking-[-0.2px];
+  }
+  .md-h2 {
+    @apply text-lg tracking-[-0.1px];
+  }
+  .md-h3 {
+    @apply text-base;
+  }
+  .md-h4,
+  .md-h5,
+  .md-h6 {
+    @apply text-[15px];
+  }
+  .md-ul,
+  .md-ol {
+    @apply my-3 space-y-1.5 pl-5;
+  }
+  .md-ul {
+    @apply list-disc marker:text-muted-soft;
+  }
+  .md-ol {
+    @apply list-decimal marker:text-muted-soft;
+  }
+  .md-li {
+    @apply pl-1;
+  }
+  .md-quote {
+    @apply my-3 border-l-2 border-hairline-strong pl-4 text-muted;
+  }
+  .md-hr {
+    @apply my-6 border-0 border-t border-hairline;
+  }
+  .md-pre {
+    @apply code relative my-4 overflow-x-auto rounded-lg border border-hairline bg-canvas-soft p-4 text-ink;
+  }
+  .md-code-block {
+    @apply bg-transparent p-0;
+  }
+  .md-code-lang {
+    @apply caption-upper absolute right-3 top-2 text-muted-soft;
+  }
+  .md-code {
+    @apply code rounded bg-muted-surface px-1.5 py-0.5 text-[0.85em] text-ink;
+  }
+  .md-link {
+    @apply text-ink underline decoration-primary decoration-1 underline-offset-2 transition-colors hover:text-primary;
+  }
+
+  /* Streaming caret — a pseudo-element, so repainting it costs no React work. */
+  .md-streaming > *:last-child::after {
+    content: '';
+    display: inline-block;
+    width: 0.5em;
+    height: 1.05em;
+    margin-left: 0.15em;
+    vertical-align: text-bottom;
+    background: hsl(var(--primary));
+    animation: caret-blink 1s steps(2, start) infinite;
   }
 
   /* ==========================================================================
@@ -414,13 +513,24 @@
   }
 }
 
+@keyframes caret-blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
   }
   .fade-in-up,
   .timeline-in,
-  .stage-active {
+  .stage-active,
+  .md-streaming > *:last-child::after {
     animation: none !important;
   }
 }
