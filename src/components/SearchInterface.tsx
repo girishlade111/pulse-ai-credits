@@ -16,7 +16,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
-import { complete, LlmError, type LlmRequestType } from "@/lib/llm";
+import { complete, ApinexError, type ApinexRequestType } from "@/lib/apinex";
 import { useNavigate } from "react-router-dom";
 import { MinimalisticIcons } from "@/components/ui/minimalistic-icons";
 import { TimelinePill, type TimelineStage } from "@/components/TimelinePill";
@@ -592,7 +592,7 @@ export const SearchInterface: React.FC<SearchInterfaceProps> = ({
   };
 
   const handleSearch = React.useCallback(
-    async (requestType: LlmRequestType) => {
+    async (requestType: ApinexRequestType) => {
       // Premium feature gate
       const premiumFeatures = ["deep_research_8x", "find_all"];
       if (premiumFeatures.includes(requestType) && subscription.plan_type !== "business") {
