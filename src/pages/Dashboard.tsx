@@ -153,9 +153,9 @@ const Dashboard: React.FC = () => {
             <div className="space-y-8">
               <section className="card p-6">
                 <h2 className="title-md">Plan</h2>
-                <p className="display-sm mt-4">{subscription?.name || "Free Plan"}</p>
+                <p className="display-sm mt-4">{subscription.name}</p>
                 <p className="body-sm mt-2 text-muted">
-                  {subscription?.can_topup
+                  {subscription.can_topup
                     ? `Top-ups at ${subscription.topup_discount}% off your plan rate.`
                     : "Free plans cannot purchase credit top-ups."}
                 </p>
@@ -163,7 +163,7 @@ const Dashboard: React.FC = () => {
                   className="mt-6 w-full"
                   onClick={() => navigate("/plans")}
                 >
-                  {subscription?.plan_type === "free" ? "Upgrade plan" : "Manage plan"}
+                  {subscription.plan_type === "free" ? "Upgrade plan" : "Manage plan"}
                   <ArrowUpRight />
                 </Button>
               </section>
