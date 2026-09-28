@@ -193,7 +193,7 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => onCollapsedChange(false)}
+            onClick={() => onCollapsedChange(true)}
             className="hidden h-8 w-8 lg:inline-flex"
             aria-label="Collapse sidebar"
             title="Collapse sidebar"
