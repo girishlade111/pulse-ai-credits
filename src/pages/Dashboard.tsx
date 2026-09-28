@@ -93,16 +93,12 @@ const Dashboard: React.FC = () => {
             <section>
               <div className="mb-6 flex items-center justify-between gap-4">
                 <h2 className="display-sm">Recent activity</h2>
-                <Button variant="ghost" size="sm" onClick={fetchTransactions}>
-                  Refresh
-                </Button>
+                <span className="caption text-muted-soft">
+                  Last {transactions.length} {transactions.length === 1 ? "entry" : "entries"}
+                </span>
               </div>
 
-              {loadingTransactions ? (
-                <div className="flex items-center justify-center py-16">
-                  <Loader2 className="h-5 w-5 animate-spin text-muted" />
-                </div>
-              ) : transactions.length === 0 ? (
+              {transactions.length === 0 ? (
                 <div className="card flex flex-col items-center gap-3 p-12 text-center">
                   <MinimalisticIcons.Check className="h-6 w-6 text-muted-soft" />
                   <p className="title-md">No activity yet</p>
@@ -110,7 +106,7 @@ const Dashboard: React.FC = () => {
                     Run a search or a research task and it will show up here with
                     the exact credit cost.
                   </p>
-                  <Button variant="secondary" onClick={() => navigate("/")}>
+                  <Button variant="secondary" onClick={() => navigate("/workspace")}>
                     Open the workspace
                   </Button>
                 </div>
