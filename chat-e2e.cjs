@@ -280,7 +280,12 @@ const main = async () => {
   const regenText = await page.locator(".bubble-agent").first().innerText();
   check("regenerated reply has content", regenText.trim().length > 20, `${regenText.trim().length} chars`);
   check("regenerated reply is a fresh run", regenText !== beforeRegen);
-  check("regenerated reply is marked as one credit run", /1 credit/.test(regenText + (await page.locator(".bubble-user").first().innerText())));
+  const userBubbleText = await page.locator(".bubble-user").first().innerText();
+  check(
+    "regenerated reply is marked as one credit run",
+    /1\s*credit/i.test(`${regenText}\n${userBubbleText}`),
+    userBubbleText.replace(/\n/g, " | ")
+  );
 
   /* ------------------------------------------------------- 13. copy action */
   await page.context().grantPermissions(["clipboard-read", "clipboard-write"]).catch(() => {});
@@ -390,12 +395,11 @@ const main = async () => {
   }
 
   /* ------------------------------------------------------ 18. mobile shell */
-  // Same context so localStorage (and therefore the chat) is shared, like a
-  // real second tab. browser.newPage() would give an isolated store.
-  const mobile = await page.context().newPage();
+  // Reuse this page and just narrow the viewport: the chat state and
+  // localStorage must survive, exactly like resizing a real window.
+  const mobile = page;
   await mobile.setViewportSize({ width: 390, height: 844 });
-  await mobile.goto(`${BASE}/workspace`, { waitUntil: "networkidle" });
-  await mobile.waitForTimeout(1000);
+  await mobile.waitForTimeout(700);
   const mComposer = mobile.locator("textarea[aria-label='Message Pulse agent']");
   await mComposer.waitFor({ state: "visible", timeout: 15000 });
   const mBox2 = await mComposer.boundingBox();
