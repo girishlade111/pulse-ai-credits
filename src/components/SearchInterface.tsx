@@ -131,13 +131,15 @@ export const SearchInterface: React.FC<SearchInterfaceProps> = ({ onResultsChang
   }, []);
 
   // Clamp on the way in and persist on the way out, so a drag can never leave
-  // the panel in a state the layout cannot recover from.
+  // the panel in a state the layout cannot recover from. Writes are debounced
+  // because a drag emits one change per pointer event.
+  React.useEffect(() => {
+    const timer = setTimeout(() => writeSidebarWidth(sidebarWidth), 250);
+    return () => clearTimeout(timer);
+  }, [sidebarWidth]);
+
   const handleSidebarWidth = React.useCallback((next: number) => {
     setSidebarWidth(clampSidebarWidth(next));
-  }, []);
-
-  const persistSidebarWidth = React.useCallback((next: number) => {
-    writeSidebarWidth(next);
   }, []);
 
   const resetSidebarWidth = React.useCallback(() => {
@@ -717,7 +719,9 @@ export const SearchInterface: React.FC<SearchInterfaceProps> = ({ onResultsChang
             chatMode
               ? cn(
                   "flex min-h-0 flex-1 flex-col",
-                  sidebarCollapsed ? "lg:ml-0" : "lg:ml-64"
+                  // Reserve exactly the width the sidebar occupies, so the
+                  // transcript never slides under the drag handle.
+                  sidebarCollapsed ? "lg:ml-0" : "lg:ml-[var(--chat-sidebar-width)]"
                 )
               : "block w-full"
           )}
