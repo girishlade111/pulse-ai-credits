@@ -1,0 +1,99 @@
+const fs = require('fs');
+const path = require('path');
+const sharp = require('sharp');
+
+const outDir = path.join(__dirname, 'preview');
+
+function getDefs(id) {
+  return `
+    <linearGradient id="${id}-bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1A1916" />
+      <stop offset="50%" stop-color="#12110E" />
+      <stop offset="100%" stop-color="#080706" />
+    </linearGradient>
+
+    <linearGradient id="${id}-border" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FF7528" stop-opacity="0.9" />
+      <stop offset="35%" stop-color="#F54E00" stop-opacity="0.4" />
+      <stop offset="70%" stop-color="#26241E" stop-opacity="0.25" />
+      <stop offset="100%" stop-color="#FFA048" stop-opacity="0.6" />
+    </linearGradient>
+
+    <radialGradient id="${id}-halo" cx="50%" cy="45%" r="50%">
+      <stop offset="0%" stop-color="#F54E00" stop-opacity="0.4" />
+      <stop offset="45%" stop-color="#F54E00" stop-opacity="0.12" />
+      <stop offset="100%" stop-color="#F54E00" stop-opacity="0" />
+    </radialGradient>
+
+    <linearGradient id="${id}-orange" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#C43800" />
+      <stop offset="25%" stop-color="#F54E00" />
+      <stop offset="55%" stop-color="#FF6F26" />
+      <stop offset="80%" stop-color="#FFA248" />
+      <stop offset="100%" stop-color="#FFD4A8" />
+    </linearGradient>
+
+    <linearGradient id="${id}-stem" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#BD3A00" />
+      <stop offset="40%" stop-color="#F54E00" />
+      <stop offset="100%" stop-color="#FF7528" />
+    </linearGradient>
+
+    <radialGradient id="${id}-spark" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="1" />
+      <stop offset="30%" stop-color="#FFA54A" stop-opacity="0.85" />
+      <stop offset="65%" stop-color="#F54E00" stop-opacity="0.3" />
+      <stop offset="100%" stop-color="#F54E00" stop-opacity="0" />
+    </radialGradient>
+
+    <filter id="${id}-shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="12" stdDeviation="16" flood-color="#000000" flood-opacity="0.65" />
+    </filter>
+  `;
+}
+
+// 5A Fixed: Continuous P-Pulse with proper rect stem
+function render5A() {
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>${getDefs('p5a')}</defs>
+  <rect width="512" height="512" rx="120" fill="url(#p5a-bg)" />
+  <rect width="510" height="510" x="1" y="1" rx="119" fill="none" stroke="url(#p5a-border)" stroke-width="2" />
+  <circle cx="260" cy="240" r="180" fill="url(#p5a-halo)" />
+
+  <g filter="url(#p5a-shadow)" transform="translate(6, 0)">
+    <!-- Vertical Stem of "P" with clean descender -->
+    <rect x="146" y="124" width="38" height="264" rx="19" fill="url(#p5a-stem)" />
+
+    <!-- Upper Loop of "P" (124 down to 264) with integrated energetic pulse return -->
+    <path d="M 165 142 
+             C 248 116, 368 128, 368 196 
+             C 368 244, 332 264, 296 264 
+             L 258 155 
+             L 222 264 
+             L 165 264"
+          fill="none"
+          stroke="url(#p5a-orange)"
+          stroke-width="34"
+          stroke-linecap="round"
+          stroke-linejoin="round" />
+
+    <!-- AI Spark at Pulse Crest -->
+    <circle cx="258" cy="155" r="26" fill="url(#p5a-spark)" />
+    <path d="M 258 131 Q 258 155 234 155 Q 258 155 258 179 Q 258 155 282 155 Q 258 155 258 131 Z" 
+          fill="#FFFFFF" />
+
+    <!-- Credit Token at Stem Foot -->
+    <circle cx="165" cy="369" r="8" fill="#FFA554" />
+    <circle cx="165" cy="369" r="3.5" fill="#FFFFFF" />
+  </g>
+</svg>`;
+}
+
+async function run() {
+  const d5a = render5A();
+  fs.writeFileSync(path.join(outDir, 'design-5a.svg'), d5a);
+  await sharp(Buffer.from(d5a)).png().toFile(path.join(outDir, 'design-5a.png'));
+  console.log("Re-rendered 5A");
+}
+
+run().catch(console.error);

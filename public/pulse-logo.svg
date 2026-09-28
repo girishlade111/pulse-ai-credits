@@ -1,0 +1,83 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 460 120" width="460" height="120">
+  <defs>
+    <linearGradient id="fl-bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#191815" />
+      <stop offset="100%" stop-color="#080706" />
+    </linearGradient>
+
+    <linearGradient id="fl-border" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FF7528" stop-opacity="0.9" />
+      <stop offset="100%" stop-color="#FFA248" stop-opacity="0.4" />
+    </linearGradient>
+
+    <radialGradient id="fl-halo" cx="50%" cy="45%" r="50%">
+      <stop offset="0%" stop-color="#F54E00" stop-opacity="0.45" />
+      <stop offset="100%" stop-color="#F54E00" stop-opacity="0" />
+    </radialGradient>
+
+    <linearGradient id="fl-orange" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#C23800" />
+      <stop offset="30%" stop-color="#F54E00" />
+      <stop offset="70%" stop-color="#FFA248" />
+      <stop offset="100%" stop-color="#FFD4A8" />
+    </linearGradient>
+
+    <linearGradient id="fl-stem" x1="0%" y1="100%" x2="0%" y2="0%">
+      <stop offset="0%" stop-color="#BA3700" />
+      <stop offset="50%" stop-color="#F54E00" />
+      <stop offset="100%" stop-color="#FF7528" />
+    </linearGradient>
+
+    <radialGradient id="fl-spark" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="1" />
+      <stop offset="35%" stop-color="#FFA54A" stop-opacity="0.9" />
+      <stop offset="100%" stop-color="#F54E00" stop-opacity="0" />
+    </radialGradient>
+  </defs>
+
+  <!-- Left Icon Mark (Scaled into 88x88 box at x=16, y=16) -->
+  <g transform="translate(16, 16) scale(0.171875)">
+    <!-- Squircle Base -->
+    <rect width="512" height="512" rx="120" fill="url(#fl-bg)" />
+    <rect width="510" height="510" x="1" y="1" rx="119" fill="none" stroke="url(#fl-border)" stroke-width="3" />
+    <circle cx="260" cy="240" r="185" fill="url(#fl-halo)" />
+
+    <g transform="translate(6, 0)">
+      <rect x="146" y="122" width="38" height="268" rx="19" fill="url(#fl-stem)" />
+      <path d="M 165 140 
+               C 248 116, 368 126, 368 196 
+               C 368 244, 332 264, 296 264 
+               L 258 152 
+               L 220 264 
+               L 165 264"
+            fill="none"
+            stroke="url(#fl-orange)"
+            stroke-width="34"
+            stroke-linecap="round"
+            stroke-linejoin="round" />
+
+      <circle cx="258" cy="152" r="26" fill="url(#fl-spark)" />
+      <path d="M 258 128 Q 258 152 234 152 Q 258 152 258 176 Q 258 152 282 152 Q 258 152 258 128 Z" fill="#FFFFFF" />
+      <circle cx="165" cy="371" r="8" fill="#FFA554" />
+      <circle cx="165" cy="371" r="3.5" fill="#FFFFFF" />
+    </g>
+  </g>
+
+  <!-- Typography: Modern Geometric Wordmark with Perfect Kerning via tspan -->
+  <g transform="translate(122, 68)">
+    <text font-family="'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" 
+          font-size="44" 
+          font-weight="600" 
+          letter-spacing="-0.03em" 
+          fill="#26251E">Pulse<tspan fill="#F54E00" font-weight="700">.</tspan><tspan fill="#5A5852" font-weight="500">ai</tspan></text>
+
+    <!-- Tagline: Credit-Based AI Workspace -->
+    <text x="2" y="24"
+          font-family="'JetBrains Mono', monospace" 
+          font-size="11" 
+          font-weight="500" 
+          letter-spacing="2.2" 
+          text-transform="uppercase" 
+          fill="#807D72">CREDIT-BASED WORKSPACE</text>
+  </g>
+</svg>

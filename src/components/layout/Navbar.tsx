@@ -13,17 +13,11 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import { MinimalisticIcons } from "@/components/ui/minimalistic-icons";
 import { LayoutDashboard, LogOut, Settings, Sparkles } from "lucide-react";
+import { PulseLogo, PulseMark } from "@/components/ui/PulseLogo";
 
-/** Wordmark: Pulse Orange mark + warm ink text. Orange stays scarce. */
+/** Re-export PulseLogo as Wordmark for seamless backward compatibility */
 export const Wordmark: React.FC<{ className?: string }> = ({ className }) => (
-  <span className={className}>
-    <span className="flex h-6 w-6 items-center justify-center rounded-md bg-primary">
-      <span className="h-2 w-2 rounded-full bg-on-primary" />
-    </span>
-    <span className="text-[15px] font-medium tracking-tight text-ink">
-      Pulse<span className="text-primary">.</span>ai
-    </span>
-  </span>
+  <PulseLogo size="sm" className={className} animated />
 );
 
 const LINKS = [

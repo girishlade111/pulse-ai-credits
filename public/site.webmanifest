@@ -1,0 +1,32 @@
+{
+  "name": "Pulse AI",
+  "short_name": "Pulse",
+  "description": "Credit-based AI workspace for search, research, image generation and task automation.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#12110E",
+  "theme_color": "#12110E",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "16x16 32x32 48x48",
+      "type": "image/x-icon"
+    },
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    },
+    {
+      "src": "/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    },
+    {
+      "src": "/pulse-icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

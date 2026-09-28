@@ -1,0 +1,87 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    
+    <linearGradient id="d3-bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1A1916" />
+      <stop offset="50%" stop-color="#12110F" />
+      <stop offset="100%" stop-color="#0A0908" />
+    </linearGradient>
+
+    <linearGradient id="d3-border" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FF7528" stop-opacity="0.9" />
+      <stop offset="30%" stop-color="#F54E00" stop-opacity="0.4" />
+      <stop offset="70%" stop-color="#2E2B24" stop-opacity="0.25" />
+      <stop offset="100%" stop-color="#FFA048" stop-opacity="0.6" />
+    </linearGradient>
+
+    <radialGradient id="d3-glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#F54E00" stop-opacity="0.38" />
+      <stop offset="50%" stop-color="#F54E00" stop-opacity="0.1" />
+      <stop offset="100%" stop-color="#F54E00" stop-opacity="0" />
+    </radialGradient>
+
+    <linearGradient id="d3-grad" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#D04200" />
+      <stop offset="25%" stop-color="#F54E00" />
+      <stop offset="55%" stop-color="#FF6B26" />
+      <stop offset="80%" stop-color="#FFA248" />
+      <stop offset="100%" stop-color="#FFD1A3" />
+    </linearGradient>
+
+    <linearGradient id="d3-flame" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFA959" />
+      <stop offset="50%" stop-color="#F54E00" />
+      <stop offset="100%" stop-color="#B83800" />
+    </linearGradient>
+
+    <radialGradient id="d3-spark" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="1" />
+      <stop offset="35%" stop-color="#FFA248" stop-opacity="0.8" />
+      <stop offset="70%" stop-color="#F54E00" stop-opacity="0.25" />
+      <stop offset="100%" stop-color="#F54E00" stop-opacity="0" />
+    </radialGradient>
+
+    <filter id="d3-shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="12" stdDeviation="16" flood-color="#000000" flood-opacity="0.65" />
+    </filter>
+  
+    <linearGradient id="facet-top" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FF7528" />
+      <stop offset="100%" stop-color="#F54E00" />
+    </linearGradient>
+    <linearGradient id="facet-left" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#D04200" />
+      <stop offset="100%" stop-color="#9C2F00" />
+    </linearGradient>
+    <linearGradient id="facet-right" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#F54E00" />
+      <stop offset="100%" stop-color="#BD3800" />
+    </linearGradient>
+  </defs>
+
+  <rect width="512" height="512" rx="120" fill="url(#d3-bg)" />
+  <rect width="510" height="510" x="1" y="1" rx="119" fill="none" stroke="url(#d3-border)" stroke-width="2" />
+  <circle cx="256" cy="256" r="180" fill="url(#d3-glow)" />
+
+  <g filter="url(#d3-shadow)">
+    <!-- Isometric Prism Cube / Diamond forming dynamic P silhouette -->
+    <!-- Top Face -->
+    <path d="M 256 120 L 370 186 L 256 252 L 142 186 Z" fill="url(#facet-top)" />
+    <!-- Left Face (Stem) -->
+    <path d="M 142 186 L 256 252 L 256 392 L 142 326 Z" fill="url(#facet-left)" />
+    <!-- Right Face (Loop) -->
+    <path d="M 256 252 L 370 186 L 370 310 L 256 376 Z" fill="url(#facet-right)" opacity="0.9" />
+
+    <!-- Inner Neon Pulse Line running through the isometric facets -->
+    <path d="M 142 256 L 198 256 L 236 170 L 276 330 L 316 220 L 344 256 L 370 256"
+          fill="none"
+          stroke="#FFFFFF"
+          stroke-width="14"
+          stroke-linecap="round"
+          stroke-linejoin="round" />
+
+    <!-- Pulse Diamond Spark -->
+    <circle cx="236" cy="170" r="24" fill="url(#d3-spark)" />
+    <circle cx="236" cy="170" r="6" fill="#FFFFFF" />
+  </g>
+</svg>

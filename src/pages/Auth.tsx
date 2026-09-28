@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/contexts/AuthContext";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { PulseLogo } from "@/components/ui/PulseLogo";
 
 const Auth: React.FC = () => {
   const { user, signIn, signUp, loading } = useAuth();
@@ -78,10 +79,11 @@ const Auth: React.FC = () => {
     <main className="section">
       <div className="page">
         <div className="mx-auto max-w-md">
-          <div className="mb-8 text-center">
-            <p className="section-label mb-3">Account</p>
+          <div className="mb-8 text-center flex flex-col items-center">
+            <PulseLogo variant="mark" size="lg" className="mb-4 shadow-lg hover:scale-105 transition-transform" animated />
+            <p className="section-label mb-2">Account</p>
             <h1 className="display-md">Sign in to Pulse AI</h1>
-            <p className="body-md mt-3 text-muted">
+            <p className="body-md mt-2 text-muted">
               Ten free credits on signup. No card required.
             </p>
           </div>

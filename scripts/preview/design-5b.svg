@@ -1,0 +1,82 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="p5b-bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1A1916" />
+      <stop offset="50%" stop-color="#12110E" />
+      <stop offset="100%" stop-color="#080706" />
+    </linearGradient>
+
+    <linearGradient id="p5b-border" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FF7528" stop-opacity="0.9" />
+      <stop offset="35%" stop-color="#F54E00" stop-opacity="0.4" />
+      <stop offset="70%" stop-color="#26241E" stop-opacity="0.25" />
+      <stop offset="100%" stop-color="#FFA048" stop-opacity="0.6" />
+    </linearGradient>
+
+    <radialGradient id="p5b-halo" cx="50%" cy="45%" r="50%">
+      <stop offset="0%" stop-color="#F54E00" stop-opacity="0.4" />
+      <stop offset="45%" stop-color="#F54E00" stop-opacity="0.12" />
+      <stop offset="100%" stop-color="#F54E00" stop-opacity="0" />
+    </radialGradient>
+
+    <linearGradient id="p5b-orange" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#C43800" />
+      <stop offset="25%" stop-color="#F54E00" />
+      <stop offset="55%" stop-color="#FF6F26" />
+      <stop offset="80%" stop-color="#FFA248" />
+      <stop offset="100%" stop-color="#FFD4A8" />
+    </linearGradient>
+
+    <linearGradient id="p5b-stem" x1="0%" y1="100%" x2="0%" y2="0%">
+      <stop offset="0%" stop-color="#BD3A00" />
+      <stop offset="40%" stop-color="#F54E00" />
+      <stop offset="100%" stop-color="#FF7528" />
+    </linearGradient>
+
+    <radialGradient id="p5b-spark" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="1" />
+      <stop offset="30%" stop-color="#FFA54A" stop-opacity="0.85" />
+      <stop offset="65%" stop-color="#F54E00" stop-opacity="0.3" />
+      <stop offset="100%" stop-color="#F54E00" stop-opacity="0" />
+    </radialGradient>
+
+    <filter id="p5b-shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="12" stdDeviation="16" flood-color="#000000" flood-opacity="0.65" />
+    </filter>
+  </defs>
+  <rect width="512" height="512" rx="120" fill="url(#p5b-bg)" />
+  <rect width="510" height="510" x="1" y="1" rx="119" fill="none" stroke="url(#p5b-border)" stroke-width="2" />
+  <circle cx="260" cy="240" r="180" fill="url(#p5b-halo)" />
+
+  <g filter="url(#p5b-shadow)">
+    <!-- Vertical Spine (Descender reaches y=388) -->
+    <rect x="144" y="124" width="38" height="264" rx="19" fill="url(#p5b-stem)" />
+
+    <!-- P Loop Arch: Clean, bold, premium modern geometry -->
+    <path d="M 182 143 C 264 143, 360 155, 360 205 C 360 255, 264 267, 182 267"
+          fill="none"
+          stroke="url(#p5b-orange)"
+          stroke-width="36"
+          stroke-linecap="round" />
+
+    <!-- The Pulse Wave traversing horizontally through the core of the P -->
+    <path d="M 112 205 L 162 205 L 192 135 L 230 275 L 268 175 L 292 205 L 360 205"
+          fill="none"
+          stroke="#FFFFFF"
+          stroke-width="14"
+          stroke-linecap="round"
+          stroke-linejoin="round" />
+
+    <!-- Radiant AI Core Star at Wave Apex -->
+    <circle cx="192" cy="135" r="22" fill="url(#p5b-spark)" />
+    <path d="M 192 115 Q 192 135 172 135 Q 192 135 192 155 Q 192 135 212 135 Q 192 135 192 115 Z" fill="#FFFFFF" />
+
+    <!-- Secondary Pulse Spark -->
+    <circle cx="268" cy="175" r="14" fill="url(#p5b-spark)" />
+    <circle cx="268" cy="175" r="4" fill="#FFFFFF" />
+
+    <!-- Credit Token at Stem Foot -->
+    <circle cx="163" cy="369" r="8" fill="#FFA554" />
+    <circle cx="163" cy="369" r="3.5" fill="#FFFFFF" />
+  </g>
+</svg>
