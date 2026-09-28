@@ -103,8 +103,11 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
       <aside
         className={cn(
           "chat-sidebar",
+          // Mobile: off-canvas until the hamburger opens it.
           open ? "translate-x-0" : "-translate-x-full",
-          collapsed && "lg:translate-x-0"
+          // Desktop: docked, unless the user collapsed it. The `lg:` variants
+          // are emitted after the base transform, so they win at that width.
+          collapsed ? "lg:-translate-x-full" : "lg:translate-x-0"
         )}
         aria-label="Chat history"
       >
