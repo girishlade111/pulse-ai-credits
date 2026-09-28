@@ -225,57 +225,47 @@ export const streamCompletion = async ({
   let buffer = "";
   let full = "";
 
-  try {
-    for (;;) {
-      const { done, value } = await reader.read();
-      if (done) break;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
 
-      buffer += decoder.decode(value, { stream: true });
+    buffer += decoder.decode(value, { stream: true });
 
-      // SSE frames are separated by a blank line.
-      let boundary = buffer.indexOf("\n\n");
-      while (boundary !== -1) {
-        const frame = buffer.slice(0, boundary);
-        buffer = buffer.slice(boundary + 2);
-        boundary = buffer.indexOf("\n\n");
+    // SSE frames are separated by a blank line.
+    let boundary = buffer.indexOf("\n\n");
+    while (boundary !== -1) {
+      const frame = buffer.slice(0, boundary);
+      buffer = buffer.slice(boundary + 2);
+      boundary = buffer.indexOf("\n\n");
 
-        const data = frame
-          .split("\n")
-          .filter((line) => line.startsWith("data:"))
-          .map((line) => line.slice(5).trim())
-          .join("");
+      const data = frame
+        .split("\n")
+        .filter((line) => line.startsWith("data:"))
+        .map((line) => line.slice(5).trim())
+        .join("");
 
-        if (!data) continue;
-        if (data === "[DONE]") {
-          await reader.cancel().catch(() => undefined);
-          return full.trim() ? full : throwEmpty();
-        }
-
-        let parsed: unknown;
-        try {
-          parsed = JSON.parse(data);
-        } catch {
-          continue;
-        }
-
-        const delta = readSseDelta(parsed);
-        if (!delta) continue;
-        full += delta;
-        onDelta(full);
+      if (!data) continue;
+      if (data === "[DONE]") {
+        reader.cancel().catch(() => undefined);
+        if (!full.trim()) throwEmpty();
+        return full;
       }
+
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(data);
+      } catch {
+        continue;
+      }
+
+      const delta = readSseDelta(parsed);
+      if (!delta) continue;
+      full += delta;
+      onDelta(full);
     }
-
-    // A stream that ends without [DONE] is still a valid partial answer.
-    if (!full.trim()) throwEmpty();
-    return full;
-  } catch (error) {
-    if (error instanceof Error && error.name === "AbortError") throw error;
-    throw error;
-  } finally {
-    reader.releaseLock?.();
   }
-};
 
-const throwEmpty = (): never => {
-  throw new ApinexError("apinex returned an empty response.");
+  // A stream that ends without [DONE] is still a valid partial answer.
+  if (!full.trim()) throwEmpty();
+  return full;
 };
