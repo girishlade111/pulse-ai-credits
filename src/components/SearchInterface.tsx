@@ -712,7 +712,7 @@ export const SearchInterface: React.FC<SearchInterfaceProps> = ({
         console.error("Error processing request:", error);
         // Credits were not charged, so the raw provider reason is safe to show.
         toast.error(
-          error instanceof LlmError
+          error instanceof ApinexError
             ? error.message
             : "An error occurred while processing your request"
         );
