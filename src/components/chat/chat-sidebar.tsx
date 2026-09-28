@@ -334,5 +334,4 @@ const PanelLeft: React.FC<{ className?: string }> = ({ className }) => (
   </svg>
 );
 
-export { MoreHorizontal };
 export default ChatSidebar;
