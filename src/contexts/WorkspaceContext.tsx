@@ -48,7 +48,7 @@ interface WorkspaceContextType extends WorkspaceState {
 
 const STORAGE_KEY = 'pulseai-workspace';
 
-/** Every visitor starts on the same ten credits the signup flow used to grant. */
+/** Every visitor starts on the same ten credits, granted on first run. */
 const INITIAL_CREDITS = 10;
 const MAX_TRANSACTIONS = 100;
 

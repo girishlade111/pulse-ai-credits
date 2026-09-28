@@ -141,7 +141,7 @@ const Index: React.FC<IndexProps> = () => {
       <section className="border-y border-hairline">
         <div className="page grid grid-cols-1 divide-y divide-hairline sm:grid-cols-3 sm:divide-x sm:divide-y-0">
           {[
-            { k: "10", v: "Free credits on signup" },
+            { k: "10", v: "Free credits, no account" },
             { k: "5s–60min", v: "Response time per tool" },
             { k: "0", v: "Seats to assign" },
           ].map((stat) => (
