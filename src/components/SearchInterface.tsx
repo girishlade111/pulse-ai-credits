@@ -138,13 +138,14 @@ export const SearchInterface: React.FC<SearchInterfaceProps> = ({ onResultsChang
   }, [chatMode, onResultsChange]);
 
   // Restore the last conversation on reload — that is the whole point of a
-  // history. Runs once; a fresh visitor still lands on the marketing view.
+  // history. An active session always wins; otherwise fall back to the flag
+  // the chat view left behind.
   const bootstrapped = React.useRef(false);
   React.useEffect(() => {
     if (bootstrapped.current) return;
     bootstrapped.current = true;
     const restored = storeRef.current.active;
-    if (restored && restored.messages.length > 0) setChatMode(true);
+    if (restored && restored.messages.length > 0) setChatModeState(true);
   }, []);
 
   // Never leave a request running after the view goes away.
