@@ -311,20 +311,91 @@ const main = async () => {
   check("selecting a mode updates the composer", /deep research/i.test(placeholder || ""), placeholder || "");
 
   /* ---------------------------------------------------- 16. premium gate */
+  // "8x Deep Research" is the Business-plan tool; plain "Deep Research" is not.
+  await modeTrigger.click();
+  await page.waitForTimeout(400);
+  await page.locator("[role='option']", { hasText: "8x Deep Research" }).first().click();
+  await page.waitForTimeout(300);
+  const turnsBeforeGate = await page.locator(".chat-turn").count();
   await composer.fill("Should be blocked on the free plan");
   await composer.press("Enter");
-  await page.waitForTimeout(1200);
-  const premiumBlocked =
-    (await page.locator("text=Business plan tool").count()) > 0;
+  await page.waitForTimeout(1500);
+  const premiumBlocked = (await page.locator("text=Business plan tool").count()) > 0;
   check("premium tool is gated on the free plan", premiumBlocked);
+  check(
+    "blocked run does not add a turn or spend credits",
+    (await page.locator(".chat-turn").count()) === turnsBeforeGate,
+    `${turnsBeforeGate} turns`
+  );
+  const creditsText = await page.locator("body").innerText();
+  const creditsLeft = Number((creditsText.match(/(\d+)\s*credits?\s*left/) || [])[1]);
+  check("credits are not charged for a blocked run", Number.isFinite(creditsLeft) ? creditsLeft >= 0 : true, `${creditsLeft} left`);
+
+  /* --------------------------------------------- 16b. low-credit behaviour */
+  await page.evaluate(() => {
+    const raw = localStorage.getItem("pulseai-workspace");
+    if (!raw) return;
+    const parsed = JSON.parse(raw);
+    parsed.credits.current_credits = 0;
+    localStorage.setItem("pulseai-workspace", JSON.stringify(parsed));
+  });
+  await page.reload({ waitUntil: "networkidle" });
+  await page.locator("textarea[aria-label='Message Pulse agent']").waitFor({ state: "visible", timeout: 15000 });
   await page.locator("button[aria-label='Choose a tool']").click();
   await page.waitForTimeout(300);
   await page.locator("[role='option']", { hasText: "Quick Search" }).first().click();
+  await page.waitForTimeout(300);
+  const zeroComposer = page.locator("textarea[aria-label='Message Pulse agent']");
+  await zeroComposer.fill("No credits left");
+  await zeroComposer.press("Enter");
+  await page.waitForTimeout(1200);
+  check(
+    "zero credits opens the upgrade dialog",
+    (await page.locator("text=Out of credits").count()) > 0
+  );
+  await page.getByRole("button", { name: "Maybe later" }).click();
+  await page.waitForTimeout(300);
 
-  /* ------------------------------------------------------ 17. mobile shell */
-  const mobile = await browser.newPage({ viewport: { width: 390, height: 844 } });
+  /* ---------------------------------------------------- 17. stop mid-stream */
+  await page.evaluate(() => {
+    const raw = localStorage.getItem("pulseai-workspace");
+    if (!raw) return;
+    const parsed = JSON.parse(raw);
+    parsed.credits.current_credits = 10;
+    localStorage.setItem("pulseai-workspace", JSON.stringify(parsed));
+  });
+  await page.reload({ waitUntil: "networkidle" });
+  const stopComposer = page.locator("textarea[aria-label='Message Pulse agent']");
+  await stopComposer.waitFor({ state: "visible", timeout: 15000 });
+  await stopComposer.fill(
+    "Write an extremely long essay about the history of computing, at least 800 words."
+  );
+  await stopComposer.press("Enter");
+  await page.waitForTimeout(2500);
+  const stopBtn = page.getByRole("button", { name: "Stop generating" });
+  check("stop button appears while generating", (await stopBtn.count()) > 0);
+  if (await stopBtn.count()) {
+    await stopBtn.click();
+    await page.waitForFunction(
+      () => {
+        const nodes = document.querySelectorAll(".bubble-agent");
+        return nodes[0] && nodes[0].dataset.chatStatus === "complete";
+      },
+      null,
+      { timeout: 30000 }
+    );
+    const stopped = await page.locator(".bubble-agent").first().innerText();
+    check("stopping keeps the partial answer on screen", stopped.trim().length > 0, `${stopped.trim().length} chars`);
+    check("stopping does not report an error", (await page.locator("text=This run failed").count()) === 0);
+  }
+
+  /* ------------------------------------------------------ 18. mobile shell */
+  // Same context so localStorage (and therefore the chat) is shared, like a
+  // real second tab. browser.newPage() would give an isolated store.
+  const mobile = await page.context().newPage();
+  await mobile.setViewportSize({ width: 390, height: 844 });
   await mobile.goto(`${BASE}/workspace`, { waitUntil: "networkidle" });
-  await mobile.waitForTimeout(900);
+  await mobile.waitForTimeout(1000);
   const mComposer = mobile.locator("textarea[aria-label='Message Pulse agent']");
   await mComposer.waitFor({ state: "visible", timeout: 15000 });
   const mBox2 = await mComposer.boundingBox();
@@ -333,17 +404,48 @@ const main = async () => {
     !!mBox2 && mBox2.y + mBox2.height <= 845 && mBox2.y >= 0,
     mBox2 ? `y=${Math.round(mBox2.y)}` : "no box"
   );
+  check("mobile shows the restored chat", (await mobile.locator(".chat-turn").count()) > 0);
   const menuBtn = mobile.getByRole("button", { name: "Open chat history" });
   check("mobile history toggle present", (await menuBtn.count()) > 0);
   if ((await menuBtn.count()) > 0) {
     await menuBtn.click();
-    await mobile.waitForTimeout(500);
+    await mobile.waitForTimeout(600);
+    const aside = mobile.locator("aside[aria-label='Chat history']");
+    check("mobile sidebar opens", await aside.isVisible());
+    const aBox = await aside.boundingBox();
     check(
-      "mobile sidebar opens",
-      await mobile.locator("aside[aria-label='Chat history']").isVisible()
+      "mobile sidebar is on-screen when open",
+      !!aBox && aBox.x >= -1,
+      aBox ? `x=${Math.round(aBox.x)}` : "no box"
+    );
+    await mobile.screenshot({ path: `${OUT}/03-mobile-sidebar.png` });
+    await mobile.getByRole("button", { name: "Close navigation" }).click();
+    await mobile.waitForTimeout(500);
+    const aBox2 = await aside.boundingBox();
+    check(
+      "mobile sidebar slides away when closed",
+      !!aBox2 && aBox2.x + aBox2.width <= 1,
+      aBox2 ? `x=${Math.round(aBox2.x)}` : "no box"
     );
   }
-  await mobile.screenshot({ path: `${OUT}/03-mobile.png` });
+
+  // mobile transcript must scroll independently, not overflow the page
+  const mScroll = await mobile.evaluate(() => {
+    const pane = document.querySelector(".app-scroll");
+    if (!pane) return { found: false };
+    return {
+      found: true,
+      overflowY: getComputedStyle(pane).overflowY,
+      scrollable: pane.scrollHeight > pane.clientHeight,
+      docScrolls: document.documentElement.scrollHeight > window.innerHeight + 2,
+    };
+  });
+  check(
+    "mobile: transcript scrolls internally, page does not",
+    mScroll.found && mScroll.overflowY === "auto" && !mScroll.docScrolls,
+    JSON.stringify(mScroll)
+  );
+  await mobile.screenshot({ path: `${OUT}/04-mobile.png` });
   await mobile.close();
 
   check("no console/page errors", consoleErrors.length === 0, consoleErrors.slice(0, 3).join(" | "));
