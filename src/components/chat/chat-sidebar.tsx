@@ -11,6 +11,7 @@ import React from "react";
 import { Button } from "@/components/ui/button";
 import { Wordmark } from "@/components/layout/Navbar";
 import type { ChatStore } from "@/lib/chat-store";
+import { SIDEBAR_MAX, SIDEBAR_MIN } from "@/lib/chat-store";
 import { cn } from "@/lib/utils";
 import {
   Check,
@@ -40,6 +41,10 @@ interface ChatSidebarProps {
   onNavigate: (path: string) => void;
   onNewChat: () => void;
   activeSessionId: string | null;
+  /** Current desktop width in px, already clamped and persisted by the parent. */
+  width: number;
+  onWidthChange: (width: number) => void;
+  onWidthReset: () => void;
 }
 
 export const ChatSidebar: React.FC<ChatSidebarProps> = ({
@@ -51,6 +56,9 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
   onNavigate,
   onNewChat,
   activeSessionId,
+  width,
+  onWidthChange,
+  onWidthReset,
 }) => {
   const [query, setQuery] = React.useState("");
   const [renamingId, setRenamingId] = React.useState<string | null>(null);
@@ -85,6 +93,57 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
   const go = (path: string) => {
     onNavigate(path);
     onOpenChange(false);
+  };
+
+  /* ----------------------------------------------------------------- resize */
+
+  // Pointer capture keeps the drag alive even when the cursor outruns the
+  // 6px handle, which is what makes the drag feel attached to the edge.
+  const [dragging, setDragging] = React.useState(false);
+  const dragRef = React.useRef<{ startX: number; startWidth: number } | null>(null);
+
+  const stopDrag = React.useCallback(() => {
+    dragRef.current = null;
+    setDragging(false);
+  }, []);
+
+  // A drag in flight must not survive an unmount (new chat, route change).
+  React.useEffect(() => stopDrag, [stopDrag]);
+
+  const handlePointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
+    // Touch drag on a phone would fight the drawer slide; resize is desktop-only.
+    if (event.pointerType === "touch") return;
+    event.preventDefault();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    dragRef.current = { startX: event.clientX, startWidth: width };
+    setDragging(true);
+  };
+
+  const handlePointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
+    const drag = dragRef.current;
+    if (!drag) return;
+    onWidthChange(drag.startWidth + (event.clientX - drag.startX));
+  };
+
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    // 16px steps, and a bigger jump with Shift held.
+    const step = event.shiftKey ? 48 : 16;
+    if (event.key === "ArrowLeft") {
+      event.preventDefault();
+      onWidthChange(width - step);
+    } else if (event.key === "ArrowRight") {
+      event.preventDefault();
+      onWidthChange(width + step);
+    } else if (event.key === "Home") {
+      event.preventDefault();
+      onWidthChange(SIDEBAR_MIN);
+    } else if (event.key === "End") {
+      event.preventDefault();
+      onWidthChange(SIDEBAR_MAX);
+    } else if (event.key === "Enter") {
+      event.preventDefault();
+      onWidthReset();
+    }
   };
 
   return (

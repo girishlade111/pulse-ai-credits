@@ -76,6 +76,35 @@ export const writeChatView = (inChat: boolean): void => {
   }
 };
 
+/* ------------------------------------------------------------------ sidebar */
+
+/** Resize bounds. Below the minimum the history titles stop being readable. */
+export const SIDEBAR_MIN = 220;
+export const SIDEBAR_MAX = 520;
+export const SIDEBAR_DEFAULT = 256;
+const WIDTH_KEY = "pulseai-chat-sidebar-width";
+
+export const clampSidebarWidth = (width: number): number =>
+  Math.min(SIDEBAR_MAX, Math.max(SIDEBAR_MIN, Math.round(width)));
+
+export const readSidebarWidth = (): number => {
+  if (typeof window === "undefined") return SIDEBAR_DEFAULT;
+  try {
+    const raw = Number(window.localStorage.getItem(WIDTH_KEY));
+    return Number.isFinite(raw) && raw > 0 ? clampSidebarWidth(raw) : SIDEBAR_DEFAULT;
+  } catch {
+    return SIDEBAR_DEFAULT;
+  }
+};
+
+export const writeSidebarWidth = (width: number): void => {
+  try {
+    window.localStorage.setItem(WIDTH_KEY, String(clampSidebarWidth(width)));
+  } catch {
+    // Storage blocked — the drag still works for this session.
+  }
+};
+
 export const deriveTitle = (text: string): string => {
   const flat = text.replace(/\s+/g, " ").trim();
   if (!flat) return "New chat";

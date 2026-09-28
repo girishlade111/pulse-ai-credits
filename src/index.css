@@ -318,8 +318,24 @@
   .composer {
     @apply shrink-0 border-t border-hairline bg-canvas-soft;
   }
+  /* Width is set at runtime (`--chat-sidebar-width`) so the panel can be
+     dragged. The mobile width is a deliberate override — a resizable drawer on
+     a 390px screen just eats the transcript. */
   .chat-sidebar {
-    @apply fixed left-0 top-0 z-50 flex h-full w-64 flex-col border-r border-hairline bg-canvas-soft transition-transform duration-200;
+    @apply fixed left-0 top-0 z-50 flex h-full flex-col border-r border-hairline bg-canvas-soft transition-transform duration-200;
+  }
+  /* The drag target: a thin hit area, with a hairline that lights up on hover. */
+  .sidebar-resizer {
+    @apply absolute right-0 top-0 z-10 h-full w-1.5 cursor-col-resize touch-none bg-transparent transition-colors;
+  }
+  .sidebar-resizer::after {
+    content: '';
+    @apply absolute inset-y-0 right-0 w-px bg-transparent transition-colors;
+  }
+  .sidebar-resizer:hover::after,
+  .sidebar-resizer:focus-visible::after,
+  .sidebar-resizer[data-dragging='true']::after {
+    @apply bg-primary;
   }
   .chat-turn {
     @apply space-y-6;
