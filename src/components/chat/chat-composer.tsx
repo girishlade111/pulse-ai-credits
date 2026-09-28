@@ -41,6 +41,12 @@ interface ChatComposerProps {
   /** Rendered under the box — the mode hint, or a credit warning. */
   footer?: React.ReactNode;
   autoFocusOnMount?: boolean;
+  /**
+   * Bump to move the caret into the composer. Needed for "New chat": the
+   * composer stays mounted across that transition, so `autoFocusOnMount`
+   * never fires and the caret would otherwise be left on the button.
+   */
+  focusToken?: number;
   variant?: "embedded" | "docked";
 }
 
@@ -60,6 +66,7 @@ export const ChatComposer: React.FC<ChatComposerProps> = ({
   onDropFiles,
   footer,
   autoFocusOnMount,
+  focusToken,
   variant = "docked",
 }) => {
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
