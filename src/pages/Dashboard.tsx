@@ -37,65 +37,29 @@ const TOOL_TIPS = [
 ];
 
 const Dashboard: React.FC = () => {
-  const { user, profile, credits, subscription, loading } = useAuth();
+  const { credits, subscription, transactions } = useWorkspace();
   const navigate = useNavigate();
-  const [transactions, setTransactions] = useState<CreditTransaction[]>([]);
-  const [loadingTransactions, setLoadingTransactions] = useState(true);
-
-  useEffect(() => {
-    if (!loading && !user) {
-      navigate("/auth");
-      return;
-    }
-    if (user) fetchTransactions();
-  }, [user, loading, navigate]);
-
-  const fetchTransactions = async () => {
-    if (!user) return;
-    try {
-      const { data, error } = await supabase
-        .from("credit_transactions")
-        .select("*")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false })
-        .limit(10);
-      if (error) throw error;
-      if (data) setTransactions(data);
-    } catch (error) {
-      console.error("Error fetching transactions:", error);
-    } finally {
-      setLoadingTransactions(false);
-    }
-  };
-
-  if (loading) {
-    return (
-      <div className="flex min-h-[calc(100dvh-4rem)] items-center justify-center bg-canvas">
-        <Loader2 className="h-5 w-5 animate-spin text-muted" />
-      </div>
-    );
-  }
 
   const stats = [
     {
       label: "Available credits",
-      value: credits?.current_credits ?? 0,
+      value: credits.current_credits,
       note: "Ready to spend on any tool",
     },
     {
       label: "Credits earned",
-      value: credits?.total_earned_credits ?? 0,
+      value: credits.total_earned_credits,
       note: "Lifetime, from plans and top-ups",
     },
     {
       label: "Credits spent",
-      value: credits?.total_spent_credits ?? 0,
+      value: credits.total_spent_credits,
       note: "Across every completed run",
     },
     {
       label: "Current plan",
-      value: subscription?.name || "Free Plan",
-      note: subscription?.can_topup
+      value: subscription.name,
+      note: subscription.can_topup
         ? "Top-ups available"
         : "Upgrade to enable top-ups",
     },
@@ -107,11 +71,9 @@ const Dashboard: React.FC = () => {
         <div className="page">
           <div className="mb-10 border-b border-hairline pb-8">
             <p className="section-label mb-3">Dashboard</p>
-            <h1 className="display-md">
-              Welcome back{profile?.full_name ? `, ${profile.full_name}` : ""}.
-            </h1>
+            <h1 className="display-md">Your credit ledger.</h1>
             <p className="body-md mt-2 text-muted">
-              Credit ledger and recent runs.
+              Credit balance and recent runs, kept in this browser.
             </p>
           </div>
 
