@@ -1,22 +1,12 @@
-import React, { useState, useEffect } from "react";
+import React from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { MinimalisticIcons } from "@/components/ui/minimalistic-icons";
 import { Footer } from "@/components/layout/Footer";
 import { TimelinePill, type TimelineStage } from "@/components/TimelinePill";
 import { cn } from "@/lib/utils";
-import { ArrowUpRight, Clock, ImageIcon, Loader2, Search, Zap } from "lucide-react";
-
-interface CreditTransaction {
-  id: string;
-  transaction_type: string;
-  request_type?: string;
-  credits_amount: number;
-  description: string;
-  created_at: string;
-}
+import { ArrowUpRight, Clock, ImageIcon, Search, Zap } from "lucide-react";
 
 /** Transaction rows map onto the same five-stage vocabulary as the agent. */
 const STAGE_BY_REQUEST: Record<string, { stage: TimelineStage; label: string }> = {
