@@ -16,7 +16,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { MinimalisticIcons } from "@/components/ui/minimalistic-icons";
 import { CHAT_MODES, getMode, type ChatMode } from "@/lib/chat-modes";
 import { fileTypeLabel, formatFileSize, isImage } from "@/lib/chat-files";
 import { cn } from "@/lib/utils";
