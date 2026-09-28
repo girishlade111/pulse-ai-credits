@@ -474,7 +474,8 @@ export const SearchInterface: React.FC<SearchInterfaceProps> = ({ onResultsChang
     setAttachments([]);
     setSidebarOpen(false);
     setChatMode(true);
-  }, []);
+    setFocusToken((token) => token + 1);
+  }, [setChatMode]);
 
   const pickSuggestion = React.useCallback((prompt: string) => {
     setInput(prompt);
@@ -574,6 +575,7 @@ export const SearchInterface: React.FC<SearchInterfaceProps> = ({ onResultsChang
       onDragStateChange={setDragActive}
       onDropFiles={(files) => void addFiles(files)}
       footer={composerFooter}
+      focusToken={focusToken}
       autoFocusOnMount
     />
   );
@@ -663,6 +665,7 @@ export const SearchInterface: React.FC<SearchInterfaceProps> = ({ onResultsChang
             onOpenChange={setSidebarOpen}
             onCollapsedChange={setSidebarCollapsed}
             onNavigate={navigate}
+            onNewChat={startNewChat}
             activeSessionId={store.activeId}
           />
         )}

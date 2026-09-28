@@ -38,6 +38,7 @@ interface ChatSidebarProps {
   onOpenChange: (open: boolean) => void;
   onCollapsedChange: (collapsed: boolean) => void;
   onNavigate: (path: string) => void;
+  onNewChat: () => void;
   activeSessionId: string | null;
 }
 
@@ -48,6 +49,7 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
   onOpenChange,
   onCollapsedChange,
   onNavigate,
+  onNewChat,
   activeSessionId,
 }) => {
   const [query, setQuery] = React.useState("");
@@ -68,11 +70,6 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
     if (!matches.length) return [];
     return [{ group: "Results", sessions: matches }];
   }, [query, store.grouped, store.ordered]);
-
-  const handleNewChat = () => {
-    store.createSession();
-    onOpenChange(false);
-  };
 
   const commitRename = () => {
     if (renamingId && draftTitle.trim()) store.renameSession(renamingId, draftTitle);
@@ -136,7 +133,10 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
 
         <div className="p-3">
           <Button
-            onClick={handleNewChat}
+            onClick={() => {
+              onNewChat();
+              onOpenChange(false);
+            }}
             className="w-full justify-start"
             aria-label="Start a new chat"
           >
