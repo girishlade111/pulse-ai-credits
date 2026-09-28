@@ -32,7 +32,7 @@ const main = async () => {
     page.waitForFunction(
       (i) => {
         const nodes = document.querySelectorAll(".bubble-agent");
-        return nodes[i] && !nodes[i].querySelector(".md-streaming");
+        return nodes[i] && nodes[i].dataset.chatStatus === "complete";
       },
       index,
       { timeout: 120000 }
