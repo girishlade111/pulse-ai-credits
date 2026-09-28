@@ -450,7 +450,6 @@ const main = async () => {
     JSON.stringify(mScroll)
   );
   await mobile.screenshot({ path: `${OUT}/04-mobile.png` });
-  await mobile.close();
 
   check("no console/page errors", consoleErrors.length === 0, consoleErrors.slice(0, 3).join(" | "));
 
