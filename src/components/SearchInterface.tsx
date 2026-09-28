@@ -44,7 +44,14 @@ import {
   revokeAttachments,
   validateFile,
 } from "@/lib/chat-files";
-import { readChatView, useChatSessions, writeChatView } from "@/lib/chat-store";
+import {
+  clampSidebarWidth,
+  readChatView,
+  readSidebarWidth,
+  useChatSessions,
+  writeChatView,
+  writeSidebarWidth,
+} from "@/lib/chat-store";
 import { uid, type ChatAttachment, type ChatMessage } from "@/lib/chat-types";
 import { cn } from "@/lib/utils";
 import { AlertTriangle, Menu, PanelLeftOpen } from "lucide-react";
@@ -108,6 +115,7 @@ export const SearchInterface: React.FC<SearchInterfaceProps> = ({ onResultsChang
   const [chatMode, setChatModeState] = React.useState(readChatView);
   const [sidebarOpen, setSidebarOpen] = React.useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = React.useState(false);
+  const [sidebarWidth, setSidebarWidth] = React.useState(readSidebarWidth);
   const [dragActive, setDragActive] = React.useState(false);
   const [copied, setCopied] = React.useState<Set<string>>(new Set());
   const [showUpgrade, setShowUpgrade] = React.useState(false);
