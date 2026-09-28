@@ -39,13 +39,30 @@ const OUT = "C:/Users/GIRISH~1/AppData/Local/Temp/opencode/shots";
   await page.waitForTimeout(600);
   await page.screenshot({ path: `${OUT}/v-03-empty-chat.png` });
 
-  // long transcript, scrolled to the top
+  // another long run in the fresh session, to exercise the scroll container
+  await page.locator("textarea[aria-label='Message Pulse agent']").fill(
+    "Write a detailed engineering report on vector databases with an executive summary, six findings, a numbered deployment plan, a quotation and a JavaScript code example."
+  );
+  await page.locator("textarea[aria-label='Message Pulse agent']").press("Enter");
+  await page.waitForFunction(
+    () => {
+      const n = document.querySelectorAll(".bubble-agent");
+      return n.length && n[n.length - 1].dataset.chatStatus === "complete";
+    },
+    null,
+    { timeout: 120000 }
+  );
+  await page.waitForTimeout(400);
+
+  // pinned to the newest message
   await page.screenshot({ path: `${OUT}/v-04-long-top.png` });
+
+  // scrolled up: the "jump to latest" affordance should be showing
   await page.evaluate(() => {
     const pane = document.querySelector(".app-scroll");
     if (pane) pane.scrollTop = 0;
   });
-  await page.waitForTimeout(300);
+  await page.waitForTimeout(500);
   await page.screenshot({ path: `${OUT}/v-05-scrolled-up.png` });
 
   // composer expanded with a long draft
