@@ -159,6 +159,9 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
       <aside
         className={cn(
           "chat-sidebar",
+          // Mobile is a fixed drawer; desktop follows the dragged width.
+          "w-[min(88vw,320px)]",
+          "lg:w-[var(--chat-sidebar-width)]",
           // Mobile: off-canvas until the hamburger opens it.
           open ? "translate-x-0" : "-translate-x-full",
           // Desktop: docked, unless the user collapsed it. The `lg:` variants
@@ -167,6 +170,24 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
         )}
         aria-label="Chat history"
       >
+        <div
+          role="separator"
+          aria-orientation="vertical"
+          aria-label="Resize chat history panel"
+          aria-valuenow={width}
+          aria-valuemin={SIDEBAR_MIN}
+          aria-valuemax={SIDEBAR_MAX}
+          tabIndex={0}
+          data-dragging={dragging}
+          onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
+          onPointerUp={stopDrag}
+          onPointerCancel={stopDrag}
+          onKeyDown={handleKeyDown}
+          onDoubleClick={onWidthReset}
+          title="Drag to resize · double-click to reset"
+          className="sidebar-resizer hidden lg:block"
+        />
         <div className="flex items-center gap-2 border-b border-hairline p-3">
           <Wordmark className="flex min-w-0 flex-1 items-center gap-2.5" />
           <Button
