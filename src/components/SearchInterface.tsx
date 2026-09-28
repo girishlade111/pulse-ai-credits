@@ -35,7 +35,7 @@ import { ChatSidebar } from "@/components/chat/chat-sidebar";
 import { ChatTurn } from "@/components/chat/chat-turn";
 import { ChatWelcome } from "@/components/chat/chat-welcome";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
-import { ApinexError, streamCompletion, type ApinexMessage } from "@/lib/apinex";
+import { ApinexError, streamCompletion, type ApinexMessage, type ApinexRequestType } from "@/lib/apinex";
 import { DEFAULT_MODE_ID, getMode, getModeCost } from "@/lib/chat-modes";
 import {
   MAX_FILES,
@@ -165,18 +165,28 @@ export const SearchInterface: React.FC<SearchInterfaceProps> = ({ onResultsChang
       const cost = getModeCost(requestType);
       const storeApi = storeRef.current;
 
-      if (storeApi.activeId && typeof truncateAt === "number") {
-        storeApi.removeMessagesFrom(storeApi.activeId, truncateAt);
+      /*
+       * `storeApi` is the store as of the last render, so it holds the
+       * transcript *before* this turn. Read it now, up front: appending below
+       * queues a state update that will not be visible until after this async
+       * function yields, so reading the store afterwards would miss the prompt
+       * entirely and send the model an empty conversation.
+       */
+      const priorTurns = (storeApi.active?.messages ?? []).filter(
+        (message) => message.status !== "error"
+      );
+      if (typeof truncateAt === "number") {
+        // Regenerating turn N: everything from N onward is replaced.
+        storeApi.removeMessagesFrom(storeApi.activeId!, truncateAt);
       }
 
       const sessionId = storeApi.activeId ?? storeApi.createSession();
-      const createdAt = new Date().toISOString();
 
       const userMessage: ChatMessage = {
         id: uid("msg"),
         role: "user",
         text: prompt,
-        createdAt,
+        createdAt: new Date().toISOString(),
         status: "complete",
         requestType: requestType as ChatMessage["requestType"],
         // Content is not persisted: a pasted file would bloat localStorage.
@@ -204,29 +214,30 @@ export const SearchInterface: React.FC<SearchInterfaceProps> = ({ onResultsChang
       const controller = new AbortController();
       abortRef.current = controller;
 
-      // Replay the thread so follow-up prompts resolve against earlier turns.
-      // The newest user turn is not in the store yet at the moment we read it,
-      // so it is appended explicitly.
-      const history = storeApi.sessions
-        .find((item) => item.id === sessionId)
-        ?.messages.filter((message) => message.status !== "error")
-        .map(
-          (message): ApinexMessage => ({
-            role: message.role === "user" ? "user" : "assistant",
-            content:
-              message.id === userMessage.id
-                ? [message.text, buildAttachmentContext(files)].filter(Boolean).join("\n")
-                : message.text,
-          })
-        )
-        .filter((message) => message.content.trim().length > 0) ?? [];
+      // Replay the thread so follow-up prompts resolve against earlier turns,
+      // then append this prompt with any attachment context folded in.
+      const keep = typeof truncateAt === "number" ? priorTurns.slice(0, truncateAt) : priorTurns;
+      const history: ApinexMessage[] = [
+        ...keep.map((message) => ({
+          role: message.role === "user" ? ("user" as const) : ("assistant" as const),
+          content: message.text,
+        })),
+        {
+          role: "user" as const,
+          content: [prompt, buildAttachmentContext(files)].filter(Boolean).join("\n"),
+        },
+      ];
+
+      // Mirror of the reply text so an abort can keep whatever already arrived.
+      let streamed = "";
 
       try {
         await streamCompletion({
           messages: history,
-          requestType: requestType as Parameters<typeof streamCompletion>[0]["requestType"],
+          requestType: requestType as ApinexRequestType,
           signal: controller.signal,
           onDelta: (text) => {
+            streamed = text;
             storeApi.patchMessage(sessionId, replyId, { text, status: "streaming" });
           },
         });
@@ -246,14 +257,12 @@ export const SearchInterface: React.FC<SearchInterfaceProps> = ({ onResultsChang
         const aborted = error instanceof Error && error.name === "AbortError";
 
         if (aborted) {
-          const partial = storeApi.sessions
-            .find((item) => item.id === sessionId)
-            ?.messages.find((message) => message.id === replyId)?.text;
+          // Keep the partial answer; charge nothing for a stopped run.
           storeApi.patchMessage(sessionId, replyId, {
             status: "complete",
-            creditsUsed: partial ? 0 : undefined,
-            text: partial?.trim()
-              ? partial
+            creditsUsed: streamed.trim() ? 0 : undefined,
+            text: streamed.trim()
+              ? `${streamed}\n\n---\n_Stopped. No credits were charged._`
               : "_Stopped before the agent produced an answer. No credits were charged._",
           });
         } else {
