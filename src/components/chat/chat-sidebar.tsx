@@ -10,14 +10,13 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Wordmark } from "@/components/layout/Navbar";
-import { useChatSessions } from "@/lib/chat-store";
+import type { ChatStore } from "@/lib/chat-store";
 import { cn } from "@/lib/utils";
 import {
   Check,
   History,
   LayoutDashboard,
   MessageSquarePlus,
-  MoreHorizontal,
   Pencil,
   Pin,
   PinOff,
@@ -29,6 +28,11 @@ import {
 } from "lucide-react";
 
 interface ChatSidebarProps {
+  /**
+   * Passed in rather than created here: two `useChatSessions` instances would
+   * each hold their own copy of the transcript and drift apart.
+   */
+  store: ChatStore;
   open: boolean;
   collapsed: boolean;
   onOpenChange: (open: boolean) => void;
@@ -38,6 +42,7 @@ interface ChatSidebarProps {
 }
 
 export const ChatSidebar: React.FC<ChatSidebarProps> = ({
+  store,
   open,
   collapsed,
   onOpenChange,
@@ -45,7 +50,6 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
   onNavigate,
   activeSessionId,
 }) => {
-  const store = useChatSessions();
   const [query, setQuery] = React.useState("");
   const [renamingId, setRenamingId] = React.useState<string | null>(null);
   const [draftTitle, setDraftTitle] = React.useState("");
@@ -62,7 +66,7 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
       session.title.toLowerCase().includes(needle)
     );
     if (!matches.length) return [];
-    return [{ group: "Results" as const, sessions: matches }];
+    return [{ group: "Results", sessions: matches }];
   }, [query, store.grouped, store.ordered]);
 
   const handleNewChat = () => {
