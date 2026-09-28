@@ -262,14 +262,15 @@ const main = async () => {
   /* ------------------------------------------------------ 12. regenerate */
   const regen = page.getByRole("button", { name: "Regenerate" }).first();
   check("regenerate control exists", (await regen.count()) > 0);
+  const beforeRegen = await page.locator(".bubble-agent").first().innerText();
   await regen.click();
-  await page.waitForTimeout(2500);
+  await page.waitForTimeout(1500);
+  // Regenerating the first turn correctly discards everything after it.
   const regenTurns = await page.locator(".chat-turn").count();
-  const regenStreamingOrDone = await page.locator(".md-streaming, .bubble-agent").count();
   check(
-    "regenerate re-runs the prompt instead of erroring on an empty query",
-    regenTurns >= 2 && regenStreamingOrDone > 0,
-    `${regenTurns} turns`
+    "regenerate replaces the reply and drops stale follow-ups",
+    regenTurns === 1,
+    `${regenTurns} turn(s)`
   );
   check(
     "regenerate did not produce the 'enter a query' dead end",
@@ -278,6 +279,8 @@ const main = async () => {
   await waitStreamingDone(0);
   const regenText = await page.locator(".bubble-agent").first().innerText();
   check("regenerated reply has content", regenText.trim().length > 20, `${regenText.trim().length} chars`);
+  check("regenerated reply is a fresh run", regenText !== beforeRegen);
+  check("regenerated reply is marked as one credit run", /1 credit/.test(regenText + (await page.locator(".bubble-user").first().innerText())));
 
   /* ------------------------------------------------------- 13. copy action */
   await page.context().grantPermissions(["clipboard-read", "clipboard-write"]).catch(() => {});
