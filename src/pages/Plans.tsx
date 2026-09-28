@@ -27,8 +27,7 @@ interface TopupPackage {
 }
 
 const Plans: React.FC = () => {
-  const { subscription, credits, setSubscription, topup } = useWorkspace();
-  const navigate = useNavigate();
+  const { subscription, setSubscription, topup } = useWorkspace();
   const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
   const [topupPackages, setTopupPackages] = useState<TopupPackage[]>([]);
   const [loading, setLoading] = useState(true);
