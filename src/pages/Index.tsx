@@ -1,13 +1,10 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "@/contexts/AuthContext";
-import { SearchInterface } from "@/components/SearchInterface";
 import { Button } from "@/components/ui/button";
 import { MinimalisticIcons } from "@/components/ui/minimalistic-icons";
 import { IdeMockup } from "@/components/IdeMockup";
 import { TimelinePill, TIMELINE_STAGES } from "@/components/TimelinePill";
 import { Footer } from "@/components/layout/Footer";
-import { cn } from "@/lib/utils";
 import { ArrowRight, Check } from "lucide-react";
 
 interface IndexProps {

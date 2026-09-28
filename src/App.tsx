@@ -4,10 +4,10 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { AuthProvider } from "@/contexts/AuthContext";
+import { WorkspaceProvider } from "@/contexts/WorkspaceContext";
 import { Navbar } from "@/components/layout/Navbar";
 import Index from "./pages/Index";
-import Auth from "./pages/Auth";
+import Workspace from "./pages/Workspace";
 import Plans from "./pages/Plans";
 import Dashboard from "./pages/Dashboard";
 import Features from "./pages/Features";
@@ -22,7 +22,7 @@ const App = () => {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <AuthProvider>
+        <WorkspaceProvider>
           <BrowserRouter>
             <div className="min-h-screen bg-canvas">
               {!isChatMode && <Navbar />}
@@ -31,7 +31,10 @@ const App = () => {
                   path="/"
                   element={<Index onChatModeChange={setIsChatMode} />}
                 />
-                <Route path="/auth" element={<Auth />} />
+                <Route
+                  path="/workspace"
+                  element={<Workspace onChatModeChange={setIsChatMode} />}
+                />
                 <Route path="/plans" element={<Plans />} />
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/features" element={<Features />} />
@@ -40,7 +43,7 @@ const App = () => {
               </Routes>
             </div>
           </BrowserRouter>
-        </AuthProvider>
+        </WorkspaceProvider>
         <Toaster />
         <Sonner />
       </TooltipProvider>
