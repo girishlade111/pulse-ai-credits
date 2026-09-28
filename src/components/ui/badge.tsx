@@ -3,18 +3,18 @@ import { cva, type VariantProps } from "class-variance-authority"
 
 import { cn } from "@/lib/utils"
 
+/** Small uppercase pill. 11px / 600 / 0.88px tracking, pill radius. */
 const badgeVariants = cva(
-  "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
+  "caption-upper inline-flex items-center rounded-full border px-2.5 py-1 transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
   {
     variants: {
       variant: {
-        default:
-          "border-transparent bg-primary text-primary-foreground hover:bg-primary/80",
-        secondary:
-          "border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80",
-        destructive:
-          "border-transparent bg-destructive text-destructive-foreground hover:bg-destructive/80",
-        outline: "text-foreground",
+        default: "border-transparent bg-surface-strong text-ink",
+        secondary: "border-hairline bg-canvas-soft text-muted",
+        destructive: "border-transparent bg-destructive text-on-primary",
+        success: "border-transparent bg-success text-on-primary",
+        outline: "border-hairline-strong bg-transparent text-ink",
+        accent: "border-transparent bg-primary text-on-primary",
       },
     },
     defaultVariants: {

@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bg-grad-b" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1A1916" />
+      <stop offset="100%" stop-color="#0E0D0C" />
+    </linearGradient>
+
+    <linearGradient id="rim-b" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FF7528" stop-opacity="0.9" />
+      <stop offset="100%" stop-color="#F54E00" stop-opacity="0.2" />
+    </linearGradient>
+
+    <linearGradient id="grad-p1" x1="0%" y1="100%" x2="0%" y2="0%">
+      <stop offset="0%" stop-color="#D04200" />
+      <stop offset="100%" stop-color="#F54E00" />
+    </linearGradient>
+
+    <linearGradient id="grad-p2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFA24A" />
+      <stop offset="60%" stop-color="#F54E00" />
+      <stop offset="100%" stop-color="#C23B00" />
+    </linearGradient>
+
+    <linearGradient id="grad-wave" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#FF5A05" />
+      <stop offset="50%" stop-color="#FFAA5C" />
+      <stop offset="100%" stop-color="#FFFFFF" />
+    </linearGradient>
+
+    <radialGradient id="spark-b" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="1" />
+      <stop offset="40%" stop-color="#FFA24A" stop-opacity="0.6" />
+      <stop offset="100%" stop-color="#F54E00" stop-opacity="0" />
+    </radialGradient>
+  </defs>
+
+  <rect width="512" height="512" rx="128" fill="url(#bg-grad-b)" />
+  <rect width="510" height="510" x="1" y="1" rx="127" fill="none" stroke="url(#rim-b)" stroke-width="2" />
+  
+  <g transform="translate(16, 0)">
+    <!-- Vertical Column / Neural Trunk -->
+    <rect x="136" y="128" width="44" height="256" rx="22" fill="url(#grad-p1)" />
+
+    <!-- Bold Curved Monogram Loop -->
+    <path d="M 158 128 C 246 128, 360 148, 360 224 C 360 300, 246 320, 158 320"
+          fill="none"
+          stroke="url(#grad-p2)"
+          stroke-width="44"
+          stroke-linecap="round" />
+
+    <!-- Integrated Electric Pulse Wave traversing horizontally through the loop -->
+    <path d="M 104 256 L 158 256 L 192 180 L 236 328 L 274 216 L 298 256 L 360 256"
+          fill="none"
+          stroke="url(#grad-wave)"
+          stroke-width="20"
+          stroke-linecap="round"
+          stroke-linejoin="round" />
+
+    <!-- Synapse Star Core -->
+    <circle cx="260" cy="180" r="28" fill="url(#spark-b)" />
+    <path d="M 260 156 Q 260 180 236 180 Q 260 180 260 204 Q 260 180 284 180 Q 260 180 260 156 Z"
+          fill="#FFFFFF" />
+  </g>
+</svg>

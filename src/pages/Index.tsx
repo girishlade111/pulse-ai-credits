@@ -1,210 +1,457 @@
-import React from 'react';
-import { useAuth } from '@/contexts/AuthContext';
-import { SearchInterface } from '@/components/SearchInterface';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { useNavigate } from 'react-router-dom';
-import { MinimalisticIcons } from '@/components/ui/minimalistic-icons';
-import AnimatedBackground from '@/components/AnimatedBackground';
-import FloatingShapes from '@/components/FloatingShapes';
-import { 
-  ArrowRight
-} from 'lucide-react';
+import React from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
+import { SearchInterface } from "@/components/SearchInterface";
+import { Button } from "@/components/ui/button";
+import { MinimalisticIcons } from "@/components/ui/minimalistic-icons";
+import { IdeMockup } from "@/components/IdeMockup";
+import { TimelinePill, TIMELINE_STAGES } from "@/components/TimelinePill";
+import { Footer } from "@/components/layout/Footer";
+import { cn } from "@/lib/utils";
+import { ArrowRight, Check } from "lucide-react";
 
 interface IndexProps {
   onChatModeChange?: (isChatMode: boolean) => void;
 }
 
+const CAPABILITIES = [
+  {
+    name: "Quick Search",
+    credits: 1,
+    icon: MinimalisticIcons.Search,
+    line: "A question in, a sourced answer out, in seconds.",
+  },
+  {
+    name: "Deep Research",
+    credits: 2,
+    icon: MinimalisticIcons.Research,
+    line: "Multi-source analysis with cross-referenced findings.",
+  },
+  {
+    name: "Image Generation",
+    credits: 1,
+    icon: MinimalisticIcons.Image,
+    line: "Describe the image. Get the image. One credit.",
+  },
+  {
+    name: "Pro Search",
+    credits: 3,
+    icon: MinimalisticIcons.Pro,
+    line: "Ranked URLs with long-form content, built for agents.",
+  },
+  {
+    name: "Task Automation",
+    credits: 10,
+    icon: MinimalisticIcons.Check,
+    line: "Enrich entity lists with fresh, verified records.",
+  },
+  {
+    name: "8x Research",
+    credits: 40,
+    icon: MinimalisticIcons.Research,
+    line: "Exhaustive methodology for work that needs footnotes.",
+  },
+];
+
+const STAGE_NOTES: Record<string, string> = {
+  thinking: "Decomposes the request and picks a plan.",
+  grep: "Sweeps the corpus for candidate sources.",
+  read: "Opens and ranks what the sweep found.",
+  edit: "Drafts the answer and writes the artifacts.",
+  done: "Reserves credits, settles the run, returns the report.",
+};
+
+const TESTIMONIALS = [
+  {
+    quote:
+      "The timeline is the part that won me over. I can see what the model did before I read a word of it.",
+    name: "Priya R.",
+    role: "Staff engineer, fintech",
+  },
+  {
+    quote:
+      "Credits instead of seats meant our research budget finally matched how people actually work.",
+    name: "Daniel M.",
+    role: "Head of research ops",
+  },
+  {
+    quote:
+      "We moved three internal tools onto it in a week. The cost per run is legible, which is rarer than it should be.",
+    name: "Aisha K.",
+    role: "Platform lead",
+  },
+];
+
+const TIERS = [
+  {
+    name: "Free",
+    price: "Free",
+    cadence: "10 credits, one time",
+    points: ["All seven tools", "10 starting credits", "Trial only"],
+    featured: false,
+  },
+  {
+    name: "Starter",
+    price: "₹499",
+    cadence: "60 credits monthly",
+    points: ["Top-ups enabled", "30 base + 30 bonus", "Monthly reset"],
+    featured: true,
+  },
+  {
+    name: "Pro",
+    price: "₹999",
+    cadence: "120 credits monthly",
+    points: ["10% off top-ups", "8x Research included", "Priority queue"],
+    featured: false,
+  },
+];
+
 const Index: React.FC<IndexProps> = ({ onChatModeChange }) => {
   const { user, credits, subscription } = useAuth();
   const navigate = useNavigate();
-  const [showLandingContent, setShowLandingContent] = React.useState(true);
+  const [chatOpen, setChatOpen] = React.useState(false);
 
   const handleResultsChange = (hasResults: boolean) => {
-    setShowLandingContent(!hasResults);
+    setChatOpen(hasResults);
     onChatModeChange?.(hasResults);
   };
 
-  const features = [
-    {
-      icon: <MinimalisticIcons.Search className="h-6 w-6 text-feature-blue" size={24} />,
-      title: "Quick Search",
-      description: "Get instant AI-powered answers to your questions",
-      cost: "1 credit"
-    },
-    {
-      icon: <MinimalisticIcons.Research className="h-6 w-6 text-feature-purple" size={24} />,
-      title: "Deep Research",
-      description: "Comprehensive analysis with detailed insights",
-      cost: "2 credits"
-    },
-    {
-      icon: <MinimalisticIcons.Image className="h-6 w-6 text-feature-green" size={24} />,
-      title: "Image Generation",
-      description: "Create stunning AI-generated images from text",
-      cost: "1 credit"
-    },
-    {
-      icon: <MinimalisticIcons.Check className="h-6 w-6 text-feature-orange" size={24} />,
-      title: "Secure & Private",
-      description: "Your data is protected with enterprise-grade security",
-      cost: "Free"
-    }
-  ];
-
-  return (
-    <div className={`${showLandingContent ? 'min-h-screen bg-gradient-hero relative overflow-hidden' : 'h-screen bg-background'}`}>
-      {/* Animated Background - Only show on landing page */}
-      {showLandingContent && (
-        <>
-          <AnimatedBackground particleCount={60} interactive={true} />
-          <FloatingShapes count={10} />
-        </>
-      )}
-      
-      <div className={`${showLandingContent ? 'container mx-auto px-4 py-12 relative z-10' : ''}`}>
-        {/* Hero Section */}
-        {showLandingContent && (
-          <div className="text-center mb-16 max-w-4xl mx-auto">
-            <div className="flex justify-center mb-6">
-              <div className="relative group cursor-pointer">
-                <MinimalisticIcons.Business 
-                  className="h-16 w-16 text-gradient transition-transform duration-500 group-hover:scale-110 group-hover:rotate-12" 
-                  size={64} 
-                />
-                <div className="absolute inset-0 animate-pulse bg-primary/20 rounded-full blur-xl opacity-60 group-hover:opacity-100 transition-opacity duration-500"></div>
-                <div className="absolute inset-0 animate-ping bg-primary/10 rounded-full opacity-30 group-hover:opacity-60 transition-opacity duration-500"></div>
-              </div>
-            </div>
-            
-            <h1 className="text-5xl md:text-6xl font-bold mb-6 leading-tight text-foreground animate-fade-in-up">
-              Supercharge Your Work with{' '}
-              <span className="text-gradient animate-shimmer bg-gradient-to-r from-primary via-purple-500 to-primary bg-[length:200%_100%] bg-clip-text text-transparent">
-                Pulse AI
-              </span>{' '}
-              🚀
-            </h1>
-            
-            <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto animate-fade-in-up animation-delay-200">
-              Get instant AI-powered answers, deep research insights, and generate stunning images. 
-              All with a simple, credit-based system that scales with your needs.
-            </p>
-
-            {user ? (
-              <div className="space-y-4 animate-fade-in-up animation-delay-400">
-                <div className="flex items-center justify-center gap-4 mb-6">
-                  {credits && (
-                    <div className="credit-badge text-lg px-4 py-2 animate-bounce-gentle hover:scale-105 transition-transform duration-300">
-                      <MinimalisticIcons.Credits className="h-5 w-5 mr-2" size={20} />
-                      {credits.current_credits} credits available
-                    </div>
-                  )}
-                  <Badge variant="secondary" className="text-sm px-3 py-1 hover:scale-105 transition-transform duration-300">
-                    {subscription?.name || 'Free Plan'}
-                  </Badge>
-                </div>
-              </div>
-            ) : (
-              <div className="flex flex-col sm:flex-row gap-4 justify-center animate-fade-in-up animation-delay-400">
-                <Button 
-                  size="lg" 
-                  className="btn-hero group overflow-hidden relative" 
-                  onClick={() => navigate('/auth')}
-                >
-                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
-                  <MinimalisticIcons.Business className="mr-2 h-5 w-5 group-hover:rotate-12 transition-transform duration-300" size={20} />
-                  Get Started Free
-                </Button>
-                <Button 
-                  size="lg" 
-                  variant="outline" 
-                  className="hover:scale-105 transition-all duration-300 hover:shadow-lg hover:border-primary/50"
-                  onClick={() => navigate('/plans')}
-                >
-                  <MinimalisticIcons.Credits className="mr-2 h-5 w-5" size={20} />
-                  View Plans
-                </Button>
-              </div>
-            )}
-          </div>
+  /* ---------------------------------------------------------------- signed in */
+  if (user) {
+    // The composer must stay mounted across the workspace -> chat-mode switch,
+    // otherwise React remounts it and the transcript is lost. Both wrappers are
+    // therefore always rendered; only their classes change.
+    return (
+      <main
+        className={cn(
+          chatOpen
+            ? "h-dvh overflow-hidden bg-canvas"
+            : "min-h-[calc(100dvh-4rem)] bg-canvas"
         )}
-
-        {/* Search Interface for authenticated users */}
-        {user && (
-          <div className={`${showLandingContent ? 'mb-16' : 'h-screen'}`}>
-            <SearchInterface onResultsChange={handleResultsChange} />
-          </div>
-        )}
-
-        {/* Features Section */}
-        {showLandingContent && (
-          <div className="mb-16">
-            <div className="text-center mb-12 animate-fade-in-up animation-delay-600">
-              <h2 className="text-3xl font-bold mb-4 text-foreground">🔥 Powerful AI Features</h2>
-              <p className="text-muted-foreground max-w-2xl mx-auto">
-                Everything you need to boost your productivity with artificial intelligence
+      >
+        <div className={cn("page pb-16 pt-10", chatOpen && "hidden")}>
+          <div className="mb-8 flex flex-col gap-6 border-b border-hairline pb-8 md:flex-row md:items-end md:justify-between">
+            <div>
+              <p className="section-label mb-3">Workspace</p>
+              <h1 className="display-md">Ask, research, or generate.</h1>
+              <p className="body-md mt-2 max-w-xl text-muted">
+                Every run opens a timeline. You can watch the credits go as it
+                happens.
               </p>
             </div>
+            <div className="flex flex-wrap items-center gap-2">
+              {credits && (
+                <span className="pill-badge">
+                  <MinimalisticIcons.Credits className="h-3 w-3" />
+                  {credits.current_credits} credits
+                </span>
+              )}
+              <span className="pill-badge">
+                {subscription?.name || "Free Plan"}
+              </span>
+              <Button variant="outline" onClick={() => navigate("/plans")}>
+                Manage plan
+              </Button>
+            </div>
+          </div>
+        </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {features.map((feature, index) => (
-                <Card 
-                  key={index} 
-                  className="card-glass group hover:scale-105 transition-all duration-500 hover:shadow-2xl hover:shadow-primary/20 cursor-pointer animate-fade-in-up"
-                  style={{ animationDelay: `${800 + index * 100}ms` }}
-                >
-                  <CardContent className="p-6 text-center">
-                    <div className="flex justify-center mb-4 group-hover:animate-bounce-gentle">
-                      {feature.icon}
-                    </div>
-                    <h3 className="text-lg font-semibold mb-2 text-foreground group-hover:text-primary transition-colors duration-300">{feature.title}</h3>
-                    <p className="text-sm text-muted-foreground mb-4">{feature.description}</p>
-                    <Badge 
-                      variant={feature.cost === "Free" ? "secondary" : "outline"}
-                      className="group-hover:scale-110 transition-transform duration-300"
-                    >
-                      {feature.cost}
-                    </Badge>
-                  </CardContent>
-                </Card>
+        <div className={cn(!chatOpen && "page")}>
+          <SearchInterface onResultsChange={handleResultsChange} />
+        </div>
+      </main>
+    );
+  }
+
+  /* ---------------------------------------------------------------- marketing */
+  return (
+    <main>
+      {/* hero-band */}
+      <section className="section">
+        <div className="page">
+          <div className="mx-auto max-w-3xl text-center">
+            <span className="pill-badge">7 tools · 1 credit ledger</span>
+            <h1 className="display-mega mt-6 text-balance">
+              An AI workspace that shows its work.
+            </h1>
+            <p className="body-md mx-auto mt-6 max-w-2xl text-body text-balance">
+              Quick search, deep research, image generation and task automation
+              in one place — priced in credits you can actually audit. Every run
+              opens a timeline you can read before you read a word of the answer.
+            </p>
+            <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
+              <Button variant="ink" onClick={() => navigate("/auth")}>
+                Start with 10 free credits
+                <ArrowRight />
+              </Button>
+              <Button variant="link" onClick={() => navigate("/plans")}>
+                See pricing
+              </Button>
+            </div>
+          </div>
+
+          <IdeMockup className="mt-16 fade-in-up" />
+        </div>
+      </section>
+
+      {/* trust strip */}
+      <section className="border-y border-hairline">
+        <div className="page grid grid-cols-1 divide-y divide-hairline sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+          {[
+            { k: "10", v: "Free credits on signup" },
+            { k: "5s–60min", v: "Response time per tool" },
+            { k: "0", v: "Seats to assign" },
+          ].map((stat) => (
+            <div key={stat.v} className="px-0 py-8 sm:px-8 sm:py-10 first:sm:pl-0">
+              <p className="display-sm mono">{stat.k}</p>
+              <p className="body-sm mt-1 text-muted">{stat.v}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* capabilities */}
+      <section className="section">
+        <div className="page">
+          <div className="mb-12 max-w-2xl">
+            <p className="section-label mb-3">Capabilities</p>
+            <h2 className="display-lg">
+              Pick the depth the question deserves.
+            </h2>
+            <p className="body-md mt-4 text-muted">
+              Each tool has its own credit cost and its own timeline. You always
+              know which one ran and what it spent.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {CAPABILITIES.map((capability) => {
+              const Icon = capability.icon;
+              return (
+                <article key={capability.name} className="card p-6">
+                  <div className="flex items-start justify-between gap-4">
+                    <Icon className="h-6 w-6 text-ink" />
+                    <span className="pill-badge">
+                      {capability.credits} credit
+                      {capability.credits > 1 ? "s" : ""}
+                    </span>
+                  </div>
+                  <h3 className="title-md mt-6">{capability.name}</h3>
+                  <p className="body-sm mt-2 text-muted">{capability.line}</p>
+                </article>
+              );
+            })}
+          </div>
+
+          <div className="mt-8">
+            <Button variant="link" onClick={() => navigate("/features")}>
+              Read the full capability list
+              <ArrowRight />
+            </Button>
+          </div>
+        </div>
+      </section>
+
+      {/* agent timeline — signature section */}
+      <section className="section border-y border-hairline bg-canvas-soft">
+        <div className="page">
+          <div className="mb-12 max-w-2xl">
+            <p className="section-label mb-3">Agent timeline</p>
+            <h2 className="display-lg">Five stages, five colours, one run.</h2>
+            <p className="body-md mt-4 text-muted">
+              Every request moves through the same five stages. The pastel pills
+              are reserved for this one surface — you will not see them used as
+              decoration anywhere else.
+            </p>
+          </div>
+
+          <ol className="grid grid-cols-1 gap-px overflow-hidden rounded-lg border border-hairline bg-hairline md:grid-cols-5">
+            {TIMELINE_STAGES.map((item, index) => (
+              <li key={item.stage} className="flex flex-col gap-4 bg-card p-6">
+                <span className="code text-muted-soft">
+                  {String(index + 1).padStart(2, "0")}
+                </span>
+                <TimelinePill stage={item.stage} label={item.label} />
+                <p className="body-sm text-muted">{STAGE_NOTES[item.stage]}</p>
+              </li>
+            ))}
+          </ol>
+        </div>
+      </section>
+
+      {/* credit system */}
+      <section className="section">
+        <div className="page grid grid-cols-1 gap-16 lg:grid-cols-2 lg:items-center">
+          <div>
+            <p className="section-label mb-3">Credit system</p>
+            <h2 className="display-lg">Costs you can reconcile.</h2>
+            <p className="body-md mt-4 max-w-lg text-muted">
+              Every run reserves its credit cost before the request starts and
+              settles when the run finishes. A failed run refunds. A top-up
+              writes a transaction row. Nothing is inferred.
+            </p>
+            <ul className="mt-8 space-y-3">
+              {[
+                "Credits reserved up front, released on failure",
+                "Every run writes a transaction you can export",
+                "Top-up discounts applied at settlement",
+              ].map((point) => (
+                <li key={point} className="flex items-start gap-3">
+                  <Check className="mt-0.5 h-4 w-4 shrink-0 text-success" />
+                  <span className="body-sm text-body">{point}</span>
+                </li>
               ))}
-            </div>
+            </ul>
+            <Button variant="secondary" className="mt-8" onClick={() => navigate("/plans")}>
+              View plans
+            </Button>
           </div>
-        )}
 
-        {/* CTA Section */}
-        {!user && showLandingContent && (
-          <div className="text-center bg-gradient-card p-8 rounded-2xl border border-border/50 animate-fade-in-up animation-delay-1200 hover:scale-105 transition-all duration-500 hover:shadow-2xl hover:shadow-primary/20">
-            <h2 className="text-2xl font-bold mb-4 text-foreground">🎯 Ready to Get Started?</h2>
-            <p className="text-muted-foreground mb-6">
-              Join thousands of users already using Pulse AI to supercharge their productivity
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button 
-                size="lg" 
-                className="btn-hero group overflow-hidden relative" 
-                onClick={() => navigate('/auth')}
-              >
-                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
-                <span className="relative z-10">Start Free with 10 Credits</span>
-              </Button>
-              <Button 
-                size="lg" 
-                variant="outline" 
-                className="hover:scale-105 transition-all duration-300 hover:shadow-lg hover:border-primary/50"
-                onClick={() => navigate('/plans')}
-              >
-                View Pricing Plans
-              </Button>
+          <div className="code-block card p-5">
+            <div className="mb-4 flex items-center gap-2 border-b border-hairline pb-3">
+              <span className="code text-muted">settle.ts</span>
             </div>
-            <p className="text-xs text-muted-foreground mt-4 opacity-70 hover:opacity-100 transition-opacity duration-300">
-              No credit card required • Get started in seconds
-            </p>
+            <pre className="code overflow-x-auto text-body">
+              <code>
+                <span className="text-primary">const</span>{" "}
+                <span className="text-ink">run</span>{" "}
+                <span className="text-muted-soft">=</span>{" "}
+                <span className="text-primary">await</span>{" "}
+                <span className="text-ink">credits</span>
+                <span className="text-muted-soft">.</span>
+                <span className="text-primary">reserve</span>
+                <span className="text-muted-soft">(&#123;</span>
+                <span className="text-ink">cost</span>
+                <span className="text-muted-soft">: </span>
+                <span className="text-timeline-edit">40</span>
+                <span className="text-muted-soft">,</span>
+                <span className="text-ink">deposit</span>
+                <span className="text-muted-soft">: </span>
+                <span className="text-primary">false</span>
+                <span className="text-muted-soft"> &#125;);{"\n\n"}</span>
+                <span className="text-primary">try</span>{" "}
+                <span className="text-muted-soft">&#123;</span>
+                <span className="text-ink">report</span>{" "}
+                <span className="text-muted-soft">=</span>{" "}
+                <span className="text-primary">await</span>{" "}
+                <span className="text-ink">pulse</span>
+                <span className="text-muted-soft">.</span>
+                <span className="text-ink">research</span>
+                <span className="text-muted-soft">(&#123;</span>
+                <span className="text-ink">depth</span>
+                <span className="text-muted-soft">: </span>
+                <span className="text-timeline-edit">8</span>
+                <span className="text-muted-soft"> &#125;);{"\n"}</span>
+                <span className="text-primary">await</span>{" "}
+                <span className="text-ink">run</span>
+                <span className="text-muted-soft">.</span>
+                <span className="text-primary">settle</span>
+                <span className="text-muted-soft">();{"\n"}</span>
+                <span className="text-primary">catch</span>{" "}
+                <span className="text-muted-soft">(&#123;</span>
+                <span className="text-primary">await</span>{" "}
+                <span className="text-ink">run</span>
+                <span className="text-muted-soft">.</span>
+                <span className="text-primary">refund</span>
+                <span className="text-muted-soft">();</span>
+                <span className="text-primary">throw</span>{" "}
+                <span className="text-ink">err</span>
+                <span className="text-muted-soft">;</span>
+                <span className="text-primary">catch</span>
+              </code>
+            </pre>
           </div>
-        )}
-      </div>
-    </div>
+        </div>
+      </section>
+
+      {/* testimonials */}
+      <section className="section border-y border-hairline">
+        <div className="page">
+          <p className="section-label mb-10">In use</p>
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+            {TESTIMONIALS.map((item) => (
+              <figure key={item.name} className="card p-6">
+                <blockquote className="body-md text-body">
+                  “{item.quote}”
+                </blockquote>
+                <figcaption className="mt-6 border-t border-hairline pt-4">
+                  <p className="title-sm">{item.name}</p>
+                  <p className="body-sm text-muted">{item.role}</p>
+                </figcaption>
+              </figure>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* pricing teaser */}
+      <section className="section">
+        <div className="page">
+          <div className="mb-12 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+            <div className="max-w-xl">
+              <p className="section-label mb-3">Pricing</p>
+              <h2 className="display-lg">Three plans, one currency.</h2>
+            </div>
+            <Button variant="link" onClick={() => navigate("/plans")}>
+              Compare all plans
+              <ArrowRight />
+            </Button>
+          </div>
+
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+            {TIERS.map((tier) => (
+              <article
+                key={tier.name}
+                className={cn(
+                  "rounded-lg border p-8",
+                  tier.featured
+                    ? "border-ink bg-ink text-canvas"
+                    : "border-hairline bg-card text-ink"
+                )}
+              >
+                <p className="caption-upper opacity-60">{tier.name}</p>
+                <p className="display-md mt-4">{tier.price}</p>
+                <p className="body-sm mt-1 opacity-70">{tier.cadence}</p>
+                <ul
+                  className={cn(
+                    "mt-6 space-y-2.5 border-t pt-6",
+                    tier.featured ? "border-white/20" : "border-hairline"
+                  )}
+                >
+                  {tier.points.map((point) => (
+                    <li key={point} className="body-sm flex items-start gap-2.5">
+                      <Check className="mt-0.5 h-4 w-4 shrink-0" />
+                      {point}
+                    </li>
+                  ))}
+                </ul>
+                <Button
+                  variant={tier.featured ? "secondary" : "ghost"}
+                  className="mt-8 w-full"
+                  onClick={() => navigate("/plans")}
+                >
+                  {tier.featured ? "Upgrade" : "Choose"}
+                </Button>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* cta-band */}
+      <section className="py-24">
+        <div className="page text-center">
+          <h2 className="display-lg mx-auto max-w-2xl text-balance">
+            Ten credits. No card. Run something today.
+          </h2>
+          <Button className="mt-8" onClick={() => navigate("/auth")}>
+            Get started free
+          </Button>
+        </div>
+      </section>
+
+      <Footer />
+    </main>
   );
 };
 

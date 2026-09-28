@@ -1,15 +1,13 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
-import { MinimalisticIcons } from '@/components/ui/minimalistic-icons';
-import { 
-  Loader2
-} from 'lucide-react';
-import { toast } from 'sonner';
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { MinimalisticIcons } from "@/components/ui/minimalistic-icons";
+import { Footer } from "@/components/layout/Footer";
+import { cn } from "@/lib/utils";
+import { Check, Loader2, Lock } from "lucide-react";
+import { toast } from "sonner";
 
 interface SubscriptionPlan {
   id: string;
@@ -35,28 +33,32 @@ const Plans: React.FC = () => {
   const [topupPackages, setTopupPackages] = useState<TopupPackage[]>([]);
   const [loading, setLoading] = useState(true);
   const [processingPlan, setProcessingPlan] = useState<string | null>(null);
-  const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'annual'>('monthly');
+  const [billingPeriod, setBillingPeriod] = useState<"monthly" | "annual">(
+    "monthly"
+  );
   const [switchingPeriod, setSwitchingPeriod] = useState(false);
 
   useEffect(() => {
     fetchPlansAndPackages();
-    
+
     // Add keyboard shortcut for billing period toggle
     const handleKeyPress = (e: KeyboardEvent) => {
-      if (e.ctrlKey && e.key === 'b') {
+      if (e.ctrlKey && e.key === "b") {
         e.preventDefault();
-        handleBillingPeriodChange(billingPeriod === 'monthly' ? 'annual' : 'monthly');
+        handleBillingPeriodChange(
+          billingPeriod === "monthly" ? "annual" : "monthly"
+        );
       }
     };
-    
-    document.addEventListener('keydown', handleKeyPress);
-    return () => document.removeEventListener('keydown', handleKeyPress);
+
+    document.addEventListener("keydown", handleKeyPress);
+    return () => document.removeEventListener("keydown", handleKeyPress);
   }, []);
 
   // Enhanced billing period switching with smooth transition
-  const handleBillingPeriodChange = (newPeriod: 'monthly' | 'annual') => {
+  const handleBillingPeriodChange = (newPeriod: "monthly" | "annual") => {
     if (newPeriod === billingPeriod) return;
-    
+
     setSwitchingPeriod(true);
     setTimeout(() => {
       setBillingPeriod(newPeriod);
@@ -67,8 +69,8 @@ const Plans: React.FC = () => {
   const fetchPlansAndPackages = async () => {
     try {
       const [plansResponse, topupResponse] = await Promise.all([
-        supabase.from('subscription_plans').select('*').order('price_inr'),
-        supabase.from('topup_packages').select('*').order('credits')
+        supabase.from("subscription_plans").select("*").order("price_inr"),
+        supabase.from("topup_packages").select("*").order("credits"),
       ]);
 
       if (plansResponse.data) {
@@ -76,8 +78,8 @@ const Plans: React.FC = () => {
       }
       if (topupResponse.data) setTopupPackages(topupResponse.data);
     } catch (error) {
-      console.error('Error fetching plans:', error);
-      toast.error('Error loading plans');
+      console.error("Error fetching plans:", error);
+      toast.error("Error loading plans");
     } finally {
       setLoading(false);
     }
@@ -85,141 +87,141 @@ const Plans: React.FC = () => {
 
   // Filter plans by billing period with dynamic annual plan creation
   const getFilteredPlans = () => {
-    if (billingPeriod === 'annual') {
-      // First, try to get annual plans from database
-      const freePlan = plans.find(p => p.plan_type === 'free');
-      const existingAnnualPlans = plans.filter(p => p.billing_period === 'annual');
-      
-      // If we have annual plans in the database, use them
+    if (billingPeriod === "annual") {
+      const freePlan = plans.find((p) => p.plan_type === "free");
+      const existingAnnualPlans = plans.filter(
+        (p) => p.billing_period === "annual"
+      );
+
       if (existingAnnualPlans.length > 0) {
         return freePlan ? [freePlan, ...existingAnnualPlans] : existingAnnualPlans;
       }
-      
-      // Otherwise, create annual plans dynamically from monthly plans
-      const monthlyPlans = plans.filter(p => 
-        p.plan_type !== 'free' && (p.billing_period || 'monthly') === 'monthly'
+
+      const monthlyPlans = plans.filter(
+        (p) =>
+          p.plan_type !== "free" && (p.billing_period || "monthly") === "monthly"
       );
-      
-      const dynamicAnnualPlans = monthlyPlans.map(monthlyPlan => {
-        // Calculate annual pricing with specific pricing for each plan
+
+      const dynamicAnnualPlans = monthlyPlans.map((monthlyPlan) => {
         let annualPrice;
-        switch(monthlyPlan.plan_type) {
-          case 'starter':
+        switch (monthlyPlan.plan_type) {
+          case "starter":
             annualPrice = 549900; // ₹5,499 per year (8.17% off)
             break;
-          case 'pro':
+          case "pro":
             annualPrice = 999900; // ₹9,999 per year (16.59% off)
             break;
-          case 'business':
+          case "business":
             annualPrice = 2999900; // ₹29,999 per year (16.67% off)
             break;
           default:
             annualPrice = Math.round(monthlyPlan.price_inr * 12 * 0.84);
         }
-        
+
         return {
           ...monthlyPlan,
           id: `${monthlyPlan.id}-annual`,
-          name: `${monthlyPlan.plan_type.charAt(0).toUpperCase() + monthlyPlan.plan_type.slice(1)} Plan (Annual)`,
+          name: `${monthlyPlan.plan_type.charAt(0).toUpperCase()}${monthlyPlan.plan_type.slice(1)} Plan (Annual)`,
           price_inr: annualPrice,
-          billing_period: 'annual' as const
+          billing_period: "annual" as const,
         };
       });
-      
+
       return freePlan ? [freePlan, ...dynamicAnnualPlans] : dynamicAnnualPlans;
-    } else {
-      // For monthly, show free plan + monthly versions of paid plans
-      return plans.filter(plan => 
-        plan.plan_type === 'free' || 
-        (plan.billing_period || 'monthly') === 'monthly'
-      );
     }
+
+    return plans.filter(
+      (plan) =>
+        plan.plan_type === "free" ||
+        (plan.billing_period || "monthly") === "monthly"
+    );
   };
 
   // Calculate annual savings with support for dynamic annual plans
   const calculateAnnualSavings = (planType: string) => {
-    const monthlyPlan = plans.find(p => p.plan_type === planType && (p.billing_period || 'monthly') === 'monthly');
-    let annualPlan = plans.find(p => p.plan_type === planType && p.billing_period === 'annual');
-    
-    // If no annual plan exists in database, calculate using exact pricing
+    const monthlyPlan = plans.find(
+      (p) =>
+        p.plan_type === planType && (p.billing_period || "monthly") === "monthly"
+    );
+    let annualPlan = plans.find(
+      (p) => p.plan_type === planType && p.billing_period === "annual"
+    );
+
     if (!annualPlan && monthlyPlan) {
       let annualPrice;
-      switch(planType) {
-        case 'starter':
-          annualPrice = 549900; // ₹5,499 per year
+      switch (planType) {
+        case "starter":
+          annualPrice = 549900;
           break;
-        case 'pro':
-          annualPrice = 999900; // ₹9,999 per year
+        case "pro":
+          annualPrice = 999900;
           break;
-        case 'business':
-          annualPrice = 2999900; // ₹29,999 per year
+        case "business":
+          annualPrice = 2999900;
           break;
         default:
           annualPrice = Math.round(monthlyPlan.price_inr * 12 * 0.84);
       }
-      
+
       annualPlan = {
         ...monthlyPlan,
         price_inr: annualPrice,
-        billing_period: 'annual'
-      } as any;
+        billing_period: "annual",
+      } as SubscriptionPlan;
     }
-    
+
     if (!monthlyPlan || !annualPlan) return { percentage: 0, amount: 0 };
-    
+
     const monthlyTotal = monthlyPlan.price_inr * 12;
     const savings = monthlyTotal - annualPlan.price_inr;
     const percentage = (savings / monthlyTotal) * 100;
-    
-    return { percentage: Math.round(percentage * 100) / 100, amount: savings };
+
+    return {
+      percentage: Math.round(percentage * 100) / 100,
+      amount: savings,
+    };
   };
 
   // Get display price and period with better annual handling
   const getPriceDisplay = (plan: SubscriptionPlan) => {
-    if (plan.price_inr === 0) return { price: 'Free', period: '' };
-    
+    if (plan.price_inr === 0) return { price: "Free", period: "" };
+
     const basePrice = formatPrice(plan.price_inr);
-    
-    // For annual plans, show annual price and mention monthly equivalent
-    if (plan.billing_period === 'annual') {
-      const monthlyEquivalent = formatPrice(Math.round(plan.price_inr / 12));
-      return { 
-        price: basePrice, 
-        period: `/year`,
-        monthlyEquivalent: `(${monthlyEquivalent}/month)` 
+
+    if (plan.billing_period === "annual") {
+      // Round to whole rupees so the equivalent never shows stray paise.
+      const monthlyEquivalent = formatPrice(
+        Math.round(plan.price_inr / 12 / 100) * 100
+      );
+      return {
+        price: basePrice,
+        period: "/year",
+        monthlyEquivalent: `${monthlyEquivalent} per month`,
       };
     }
-    
-    return { price: basePrice, period: '/month' };
+
+    return { price: basePrice, period: "/month" };
   };
 
   const formatPrice = (priceInPaise: number) => {
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'INR',
+    return new Intl.NumberFormat("en-IN", {
+      style: "currency",
+      currency: "INR",
       minimumFractionDigits: 0,
     }).format(priceInPaise / 100);
   };
 
   const getPlanIcon = (planType: string) => {
-    const colorMap = {
-      'free': 'text-muted-foreground',
-      'starter': 'text-feature-blue',
-      'pro': 'text-feature-purple', 
-      'business': 'text-feature-orange'
-    };
-    
-    const iconProps = { 
-      className: `h-6 w-6 ${colorMap[planType] || 'text-muted-foreground'}`, 
-      size: 24 
-    };
-    
+    const iconProps = { className: "h-5 w-5", size: 20 };
     switch (planType) {
-      case 'free': return <MinimalisticIcons.Free {...iconProps} />;
-      case 'starter': return <MinimalisticIcons.Starter {...iconProps} />;
-      case 'pro': return <MinimalisticIcons.Pro {...iconProps} />;
-      case 'business': return <MinimalisticIcons.Business {...iconProps} />;
-      default: return <MinimalisticIcons.Free {...iconProps} />;
+      case "starter":
+        return <MinimalisticIcons.Starter {...iconProps} />;
+      case "pro":
+        return <MinimalisticIcons.Pro {...iconProps} />;
+      case "business":
+        return <MinimalisticIcons.Business {...iconProps} />;
+      default:
+        return <MinimalisticIcons.Free {...iconProps} />;
     }
   };
 
@@ -229,769 +231,717 @@ const Plans: React.FC = () => {
 
   // Calculate base and bonus credits for paid plans
   const getPlanCredits = (planType: string, totalCredits: number) => {
-    if (planType === 'free') {
+    if (planType === "free") {
       return { base: totalCredits, bonus: 0 };
     }
-    // For paid plans, credits are split 50/50 between base and bonus
     const base = totalCredits / 2;
     const bonus = totalCredits / 2;
     return { base, bonus };
   };
 
   // Calculate discounted top-up price based on user's plan
-  const calculateTopupPrice = (originalPrice: number, userPlan: string | undefined) => {
-    if (!userPlan || userPlan === 'free') return originalPrice;
-    
+  const calculateTopupPrice = (
+    originalPrice: number,
+    userPlan: string | undefined
+  ) => {
+    if (!userPlan || userPlan === "free") return originalPrice;
+
     const discountMap: Record<string, number> = {
-      'starter': 0,
-      'pro': 10,
-      'business': 20
+      starter: 0,
+      pro: 10,
+      business: 20,
     };
-    
+
     const discount = discountMap[userPlan] || 0;
-    return originalPrice * (1 - discount / 100);
+    // Round to whole rupees so the displayed price never shows stray paise.
+    return Math.round((originalPrice * (1 - discount / 100)) / 100) * 100;
   };
 
   const handlePlanUpgrade = async (plan: SubscriptionPlan) => {
     if (!user) {
-      navigate('/auth');
+      navigate("/auth");
       return;
     }
 
-    if (plan.plan_type === 'free') {
-      toast.info('You are already on the free plan');
+    if (plan.plan_type === "free") {
+      toast.info("You are already on the free plan");
       return;
     }
 
     setProcessingPlan(plan.id);
-    
+
     try {
       // Mock Stripe checkout - In real app, this would create a Stripe session
-      toast.success(`Redirecting to payment for ${plan.name}...`);
-      
-      // Simulate payment flow
+      toast.success(`Redirecting to payment for ${plan.name}`);
+
       setTimeout(() => {
-        toast.success('Payment successful! Your plan has been upgraded.');
+        toast.success("Payment successful! Your plan has been upgraded.");
         refreshUserData();
         setProcessingPlan(null);
       }, 2000);
-      
     } catch (error) {
-      console.error('Error upgrading plan:', error);
-      toast.error('Error processing payment');
+      console.error("Error upgrading plan:", error);
+      toast.error("Error processing payment");
       setProcessingPlan(null);
     }
   };
 
   const handleTopup = async (pkg: TopupPackage) => {
     if (!user) {
-      navigate('/auth');
+      navigate("/auth");
       return;
     }
 
-    // Check if user has a paid plan
-    if (!subscription?.can_topup || subscription?.plan_type === 'free') {
-      toast.error('Credit top-ups are only available for paid plans. Please upgrade to access top-ups.');
+    if (!subscription?.can_topup || subscription?.plan_type === "free") {
+      toast.error(
+        "Credit top-ups are only available for paid plans. Please upgrade to access top-ups."
+      );
       return;
     }
 
     try {
-      // Calculate discounted price based on user's plan
-      const discountedPrice = calculateTopupPrice(pkg.price_inr, subscription.plan_type);
+      const discountedPrice = calculateTopupPrice(
+        pkg.price_inr,
+        subscription.plan_type
+      );
       const discount = subscription.topup_discount || 0;
-      
-      toast.success(`Processing top-up of ${pkg.credits} credits for ${formatPrice(discountedPrice)}...`);
-      
-      // Mock payment and credit addition
+
+      toast.success(
+        `Processing top-up of ${pkg.credits} credits for ${formatPrice(discountedPrice)}`
+      );
+
       setTimeout(async () => {
         if (credits) {
           await supabase
-            .from('user_credits')
+            .from("user_credits")
             .update({
               current_credits: credits.current_credits + pkg.credits,
-              total_earned_credits: credits.total_earned_credits + pkg.credits
+              total_earned_credits: credits.total_earned_credits + pkg.credits,
             })
-            .eq('user_id', user.id);
+            .eq("user_id", user.id);
 
-          await supabase
-            .from('credit_transactions')
-            .insert({
-              user_id: user.id,
-              transaction_type: 'topup',
-              credits_amount: pkg.credits,
-              description: `Credit top-up: ${pkg.credits} credits${discount > 0 ? ` (${discount}% discount applied)` : ''}`
-            });
+          await supabase.from("credit_transactions").insert({
+            user_id: user.id,
+            transaction_type: "topup",
+            credits_amount: pkg.credits,
+            description: `Credit top-up: ${pkg.credits} credits${
+              discount > 0 ? ` (${discount}% discount applied)` : ""
+            }`,
+          });
 
-          toast.success(`Successfully added ${pkg.credits} credits to your account!`);
+          toast.success(
+            `Successfully added ${pkg.credits} credits to your account!`
+          );
           refreshUserData();
         }
       }, 1500);
-      
     } catch (error) {
-      console.error('Error processing top-up:', error);
-      toast.error('Error processing top-up');
+      console.error("Error processing top-up:", error);
+      toast.error("Error processing top-up");
     }
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-hero flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="flex min-h-[calc(100dvh-4rem)] items-center justify-center bg-canvas">
+        <Loader2 className="h-5 w-5 animate-spin text-muted" />
       </div>
     );
   }
 
+  const userPlanType = subscription?.plan_type || "free";
+  const isFreePlan = userPlanType === "free";
+  const visiblePlans = getFilteredPlans();
+
   return (
-    <div className="min-h-screen bg-gradient-hero">
-      <div className="container mx-auto px-4 py-12">
-        <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold mb-4 text-gradient">
-            Choose Your AI Plan
-          </h1>
-          <p className="text-xl text-muted-foreground max-w-2xl mx-auto mb-6">
-            Unlock the full potential of AI with our flexible credit system and powerful features
-          </p>
-          
-          {/* Billing Period Toggle - Enhanced Visibility */}
-          <div className="flex flex-col items-center justify-center mb-12">
-            <h3 className="text-lg font-semibold text-center mb-4">Choose Your Billing Period</h3>
-            <div className="relative">
-              <div className="inline-flex items-center bg-card border-2 border-primary/20 rounded-xl p-2 shadow-lg">
-                <Button
-                  variant={billingPeriod === 'monthly' ? 'default' : 'ghost'}
-                  size="lg"
-                  onClick={() => handleBillingPeriodChange('monthly')}
-                  disabled={switchingPeriod}
-                  className={`${
-                    billingPeriod === 'monthly' 
-                      ? 'bg-primary text-primary-foreground shadow-md border-primary/50' 
-                      : 'text-foreground hover:text-primary hover:bg-primary/10'
-                  } transition-all duration-300 px-6 py-3 font-medium min-w-[120px] ${switchingPeriod ? 'opacity-50' : ''}`}
-                >
-                  {switchingPeriod && billingPeriod !== 'monthly' ? (
-                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  ) : null}
-                  Monthly
-                </Button>
-                <Button
-                  variant={billingPeriod === 'annual' ? 'default' : 'ghost'}
-                  size="lg"
-                  onClick={() => handleBillingPeriodChange('annual')}
-                  disabled={switchingPeriod}
-                  className={`${
-                    billingPeriod === 'annual' 
-                      ? 'bg-primary text-primary-foreground shadow-md border-primary/50' 
-                      : 'text-foreground hover:text-primary hover:bg-primary/10'
-                  } transition-all duration-300 px-6 py-3 font-medium min-w-[120px] relative ${switchingPeriod ? 'opacity-50' : ''}`}
-                >
-                  {switchingPeriod && billingPeriod !== 'annual' ? (
-                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  ) : null}
-                  Annual
-                  <Badge className="ml-2 bg-feature-green text-white border-0 text-xs font-bold shadow-sm">
-                    💰 Save up to 16.67%
-                  </Badge>
-                </Button>
-              </div>
-              {/* Visual indicator */}
-              <div className="absolute -bottom-3 left-1/2 transform -translate-x-1/2">
-                <div className="w-2 h-2 bg-primary rounded-full animate-pulse"></div>
-              </div>
-            </div>
-            <p className="text-sm text-muted-foreground mt-4 text-center max-w-md">
-              Switch between monthly and annual billing to see different pricing options.
-              {billingPeriod === 'annual' && ' Annual plans offer significant savings!'}
-              <br />
-              <span className="text-xs text-muted-foreground/70 mt-1 inline-block">
-                💡 Tip: Press <kbd className="px-1 py-0.5 bg-muted rounded text-xs">Ctrl+B</kbd> to toggle billing period
-              </span>
+    <main>
+      <section className="section-tight">
+        <div className="page">
+          {/* header */}
+          <div className="max-w-2xl border-b border-hairline pb-10">
+            <p className="section-label mb-3">Pricing</p>
+            <h1 className="display-lg">Credits, not seats.</h1>
+            <p className="body-md mt-4 text-muted">
+              Every plan is the same seven tools. What changes is how many credits
+              land in your account each month and what a top-up costs you.
             </p>
           </div>
-          
-          <div className="flex flex-wrap justify-center gap-4 text-sm text-muted-foreground mb-6">
-            <div className="flex items-center gap-2">
-              <MinimalisticIcons.Gift className="h-4 w-4 text-feature-pink" />
-              <span>Paid plans include <span className="text-feature-pink font-medium">bonus credits</span></span>
-            </div>
-            <div className="flex items-center gap-2">
-              <MinimalisticIcons.Warning className="h-4 w-4 text-feature-orange" />
-              <span>Free users cannot purchase <span className="text-feature-orange font-medium">top-ups</span></span>
-            </div>
-            <div className="flex items-center gap-2">
-              <MinimalisticIcons.Credits className="h-4 w-4 text-feature-blue" />
-              <span>Top-up <span className="text-feature-blue font-medium">discounts</span> for Pro & Business</span>
-            </div>
-          </div>
-          
-          {/* Additional billing period info */}
-          <div className="text-center mb-8">
-            <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-300 ${
-              billingPeriod === 'annual' 
-                ? 'bg-green-500/10 border border-green-500/30 text-green-400' 
-                : 'bg-blue-500/10 border border-blue-500/30 text-blue-400'
-            }`}>
-              {billingPeriod === 'annual' ? (
-                <>
-                  🎉 <span className="font-medium">Great choice!</span> Annual billing saves you money and provides uninterrupted service.
-                </>
-              ) : (
-                <>
-                  📅 <span className="font-medium">Monthly billing</span> - Cancel anytime with full flexibility.
-                </>
-              )}
-            </div>
-          </div>
-        </div>
 
-        {/* Subscription Plans */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-16 transition-all duration-500">
-          {getFilteredPlans().map((plan, index) => {
-            const { base, bonus } = getPlanCredits(plan.plan_type, plan.credits);
-            const isPaidPlan = plan.plan_type !== 'free';
-            const priceInfo = getPriceDisplay(plan);
-            const savings = calculateAnnualSavings(plan.plan_type);
-            const showSavings = billingPeriod === 'annual' && isPaidPlan && savings.percentage > 0;
-            const isDynamicAnnual = plan.id.includes('-annual'); // Dynamic annual plan indicator
-            
-            return (
-              <Card 
-                key={`${plan.id}-${billingPeriod}`}
-                className={`card-glass relative overflow-hidden transform transition-all duration-500 hover:scale-105 ${
-                  isCurrentPlan(plan.plan_type) 
-                    ? 'ring-2 ring-primary shadow-[var(--shadow-primary)] border-primary/50' 
-                    : ''
-                } ${showSavings ? 'border-green-500/50 shadow-green-500/20' : ''}`}
-                data-plan={plan.plan_type}
-                style={{ animationDelay: `${index * 100}ms` }}
-              >
-                {isCurrentPlan(plan.plan_type) && (
-                  <div className="absolute top-0 left-0 right-0 bg-primary text-primary-foreground text-center py-2 text-sm font-medium">
-                    Current Plan
-                  </div>
-                )}
-                
-                {showSavings && (
-                  <div className="absolute top-0 right-0 bg-gradient-to-r from-green-500 to-green-400 text-white text-sm px-4 py-2 rounded-bl-lg font-bold shadow-lg border-2 border-green-300 animate-pulse">
-                    💰 {savings.percentage}% OFF
-                  </div>
-                )}
-                
-                <CardHeader className={`text-center ${isCurrentPlan(plan.plan_type) ? 'pt-12' : showSavings ? 'pt-8' : 'pt-6'}`}>
-                  <div className="flex justify-center mb-4">
-                    {getPlanIcon(plan.plan_type)}
-                  </div>
-                  <CardTitle className="text-xl">
-                    {plan.plan_type === 'free' 
-                      ? plan.name 
-                      : `${plan.plan_type.charAt(0).toUpperCase() + plan.plan_type.slice(1)} Plan${plan.billing_period === 'annual' ? ' (Annual)' : ''}`
-                    }
-                  </CardTitle>
-                  <CardDescription className="space-y-2">
-                    <div className="text-3xl font-bold text-foreground">
-                      {priceInfo.price}
-                      {priceInfo.period && <span className="text-sm text-muted-foreground">{priceInfo.period}</span>}
-                    </div>
-                    {priceInfo.monthlyEquivalent && (
-                      <div className="text-xs text-muted-foreground">
-                        {priceInfo.monthlyEquivalent}
-                      </div>
-                    )}
-                    {showSavings && (
-                      <div className="space-y-2">
-                        <div className="text-sm text-muted-foreground">
-                          <span className="line-through">{formatPrice(plans.find(p => p.plan_type === plan.plan_type && (p.billing_period || 'monthly') === 'monthly')?.price_inr * 12 || 0)}</span>
-                          <span className="ml-1 text-xs">if paid monthly</span>
-                        </div>
-                        <div className="flex items-center justify-center gap-1 flex-wrap">
-                          <Badge className="bg-feature-green/20 text-feature-green border-feature-green/30 font-medium text-xs">
-                            💰 Save {formatPrice(savings.amount)}
-                          </Badge>
-                          <Badge className="bg-feature-purple/20 text-feature-purple border-feature-purple/30 font-medium text-xs">
-                            🎉 {savings.percentage}% OFF
-                          </Badge>
-                        </div>
-                        <div className="text-xs text-feature-green font-medium">
-                          Annual savings compared to monthly billing
-                        </div>
-                      </div>
-                    )}
-                  </CardDescription>
-                </CardHeader>
-                
-                <CardContent className="space-y-4">
-                  <div className="space-y-3">
-                    {/* Credits Display */}
-                    <div className="flex items-center gap-2">
-                      <MinimalisticIcons.Check className="h-4 w-4 text-feature-green" />
-                      {isPaidPlan ? (
-                        <div className="flex flex-col">
-                          <span className="text-sm font-medium">
-                            <span className="text-feature-blue">{base} base</span> + <span className="text-feature-purple">{bonus} bonus</span> credits
-                          </span>
-                          <span className="text-xs text-muted-foreground">
-                            = <span className="text-primary font-medium">{plan.credits} total credits</span>/{plan.billing_period === 'annual' ? 'month (renewed annually)' : 'month'}
-                          </span>
-                        </div>
-                      ) : (
-                        <div className="flex flex-col">
-                          <span className="text-sm font-medium"><span className="text-primary">{plan.credits} credits</span></span>
-                          <span className="text-xs text-muted-foreground">One-time only, no monthly reset</span>
-                        </div>
-                      )}
-                    </div>
-                    
-                    {/* All AI Features */}
-                    <div className="flex items-center gap-2">
-                      <MinimalisticIcons.Check className="h-4 w-4 text-feature-green" />
-                      <span className="text-sm">All <span className="text-feature-purple font-medium">AI features</span> access</span>
-                    </div>
-                    
-                    {/* Top-up availability */}
-                    <div className="flex items-center gap-2">
-                      {plan.can_topup ? (
-                        <MinimalisticIcons.Check className="h-4 w-4 text-feature-green" />
-                      ) : (
-                        <MinimalisticIcons.Close className="h-4 w-4 text-feature-orange" />
-                      )}
-                      <span className="text-sm">
-                        {plan.can_topup 
-                          ? <>Credit <span className="text-feature-blue font-medium">top-ups</span> {plan.topup_discount > 0 ? `(${plan.topup_discount}% off)` : '(normal price)'}</> 
-                          : <>No <span className="text-feature-orange font-medium">top-ups</span> available</>
-                        }
+          {/* billing period toggle */}
+          <div className="mt-10 flex flex-col items-start gap-4 md:flex-row md:items-center md:justify-between">
+            <div
+              className="inline-flex items-center gap-1 rounded-lg border border-hairline bg-canvas-soft p-1"
+              role="group"
+              aria-label="Billing period"
+            >
+              {(["monthly", "annual"] as const).map((period) => (
+                <button
+                  key={period}
+                  type="button"
+                  disabled={switchingPeriod}
+                  onClick={() => handleBillingPeriodChange(period)}
+                  className={cn(
+                    "caption-upper inline-flex h-9 items-center gap-2 rounded-md px-4 transition-colors",
+                    billingPeriod === period
+                      ? "border border-hairline-strong bg-card text-ink"
+                      : "border border-transparent text-muted hover:text-ink",
+                    switchingPeriod && "opacity-50"
+                  )}
+                >
+                  {switchingPeriod && billingPeriod !== period && (
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                  )}
+                  {period}
+                </button>
+              ))}
+            </div>
+            <p className="body-sm text-muted">
+              {billingPeriod === "annual"
+                ? "Annual billing is billed once and renews every year."
+                : "Monthly billing renews each month and can be cancelled anytime."}{" "}
+              Press <span className="kbd">Ctrl</span>{" "}
+              <span className="kbd">B</span> to toggle.
+            </p>
+          </div>
+
+          {/* plans */}
+          {visiblePlans.length === 0 ? (
+            <div className="card mt-10 flex flex-col items-center gap-3 p-12 text-center">
+              <p className="title-md">Pricing is unavailable right now</p>
+              <p className="body-sm max-w-sm text-muted">
+                We could not load the plan catalogue. Check your connection and
+                try again.
+              </p>
+              <Button variant="secondary" onClick={fetchPlansAndPackages}>
+                Retry
+              </Button>
+            </div>
+          ) : (
+            <div className="mt-10 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
+              {visiblePlans.map((plan) => {
+              const { base, bonus } = getPlanCredits(
+                plan.plan_type,
+                plan.credits
+              );
+              const isPaidPlan = plan.plan_type !== "free";
+              const priceInfo = getPriceDisplay(plan);
+              const savings = calculateAnnualSavings(plan.plan_type);
+              const showSavings =
+                billingPeriod === "annual" && isPaidPlan && savings.percentage > 0;
+              const current = isCurrentPlan(plan.plan_type);
+              const featured = !current && plan.plan_type === "pro";
+              const monthlyPrice =
+                plans.find(
+                  (p) =>
+                    p.plan_type === plan.plan_type &&
+                    (p.billing_period || "monthly") === "monthly"
+                )?.price_inr ?? 0;
+              const isAnnual = plan.billing_period === "annual";
+
+              return (
+                <article
+                  key={`${plan.id}-${billingPeriod}`}
+                  data-plan={plan.plan_type}
+                  className={cn(
+                    "flex flex-col rounded-lg border p-8 transition-colors",
+                    featured
+                      ? "border-ink bg-ink text-canvas"
+                      : "border-hairline bg-card text-ink"
+                  )}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <span className={cn(featured ? "text-canvas" : "text-ink")}>
+                      {getPlanIcon(plan.plan_type)}
+                    </span>
+                    {current && (
+                      <span
+                        className={cn(
+                          "pill-badge",
+                          featured && "border border-white/25 bg-transparent text-canvas"
+                        )}
+                      >
+                        Current plan
                       </span>
-                    </div>
-                    
-                    {/* Plan type indicators */}
-                    {plan.plan_type === 'free' && (
-                      <div className="flex items-center gap-2">
-                        <MinimalisticIcons.Warning className="h-4 w-4 text-feature-yellow" />
-                        <span className="text-sm"><span className="text-feature-yellow font-medium">Trial</span> use only</span>
-                      </div>
                     )}
-                    
-                    {isPaidPlan && (
-                      <div className="flex items-center gap-2">
-                        <MinimalisticIcons.Gift className="h-4 w-4 text-feature-pink" />
-                        <span className="text-sm">
-                          <span className="text-feature-pink font-medium">
-                            {plan.billing_period === 'annual' ? 'Annual subscription' : 'Monthly subscription'}
+                    {featured && !current && (
+                      <span className="caption-upper rounded-full border border-white/25 px-2.5 py-1 text-canvas">
+                        Most popular
+                      </span>
+                    )}
+                  </div>
+
+                  <h2 className="display-sm mt-6">
+                    {plan.plan_type === "free"
+                      ? plan.name
+                      : `${plan.plan_type.charAt(0).toUpperCase()}${plan.plan_type.slice(1)} Plan${
+                          isAnnual ? " (Annual)" : ""
+                        }`}
+                  </h2>
+
+                  <p className="mt-4 flex items-baseline gap-1.5">
+                    <span className="display-md">{priceInfo.price}</span>
+                    {priceInfo.period && (
+                      <span
+                        className={cn(
+                          "body-sm",
+                          featured ? "text-canvas/70" : "text-muted"
+                        )}
+                      >
+                        {priceInfo.period}
+                      </span>
+                    )}
+                  </p>
+                  {priceInfo.monthlyEquivalent && (
+                    <p
+                      className={cn(
+                        "body-sm mt-1",
+                        featured ? "text-canvas/70" : "text-muted"
+                      )}
+                    >
+                      {priceInfo.monthlyEquivalent}
+                    </p>
+                  )}
+
+                  {showSavings && (
+                    <div
+                      className={cn(
+                        "mt-4 rounded-md border p-3",
+                        featured
+                          ? "border-white/20"
+                          : "border-hairline bg-canvas-soft"
+                      )}
+                    >
+                      <p
+                        className={cn(
+                          "body-sm line-through",
+                          featured ? "text-canvas/60" : "text-muted"
+                        )}
+                      >
+                        {formatPrice(monthlyPrice * 12 || 0)} if paid monthly
+                      </p>
+                      <p
+                        className={cn(
+                          "body-sm mt-1",
+                          featured ? "text-canvas" : "text-ink"
+                        )}
+                      >
+                        Save {formatPrice(savings.amount)} ·{" "}
+                        {savings.percentage}% off
+                      </p>
+                    </div>
+                  )}
+
+                  <ul
+                    className={cn(
+                      "mt-6 flex-1 space-y-3 border-t pt-6",
+                      featured ? "border-white/20" : "border-hairline"
+                    )}
+                  >
+                    <li className="body-sm flex items-start gap-2.5">
+                      <Check className="mt-0.5 h-4 w-4 shrink-0" />
+                      {isPaidPlan ? (
+                        <span>
+                          <span className="font-medium">{base} base</span> +{" "}
+                          <span className="font-medium">{bonus} bonus</span>{" "}
+                          credits
+                          <span
+                            className={cn(
+                              "block",
+                              featured ? "text-canvas/70" : "text-muted"
+                            )}
+                          >
+                            {plan.credits} total credits
+                            {isAnnual
+                              ? " per month, renewed annually"
+                              : " per month"}
                           </span>
                         </span>
-                      </div>
+                      ) : (
+                        <span>
+                          <span className="font-medium">
+                            {plan.credits} credits
+                          </span>
+                          <span
+                            className={cn(
+                              "block",
+                              featured ? "text-canvas/70" : "text-muted"
+                            )}
+                          >
+                            One time only, no monthly reset
+                          </span>
+                        </span>
+                      )}
+                    </li>
+                    <li className="body-sm flex items-start gap-2.5">
+                      <Check className="mt-0.5 h-4 w-4 shrink-0" />
+                      All seven AI tools
+                    </li>
+                    <li className="body-sm flex items-start gap-2.5">
+                      {plan.can_topup ? (
+                        <Check className="mt-0.5 h-4 w-4 shrink-0" />
+                      ) : (
+                        <span className="mt-1.5 h-3 w-3 shrink-0 rounded-full border border-current" />
+                      )}
+                      {plan.can_topup ? (
+                        <span>
+                          Credit top-ups{" "}
+                          {plan.topup_discount > 0
+                            ? `at ${plan.topup_discount}% off`
+                            : "at standard price"}
+                        </span>
+                      ) : (
+                        "No top-ups available"
+                      )}
+                    </li>
+                    {plan.plan_type === "free" ? (
+                      <li className="body-sm flex items-start gap-2.5">
+                        <span className="mt-1.5 h-3 w-3 shrink-0 rounded-full border border-current" />
+                        Trial use only
+                      </li>
+                    ) : (
+                      <li className="body-sm flex items-start gap-2.5">
+                        <Check className="mt-0.5 h-4 w-4 shrink-0" />
+                        {isAnnual ? "Annual subscription" : "Monthly subscription"}
+                      </li>
                     )}
-                  </div>
+                  </ul>
 
                   <Button
                     onClick={() => handlePlanUpgrade(plan)}
-                    disabled={isCurrentPlan(plan.plan_type) || processingPlan === plan.id}
-                    className={`w-full ${isCurrentPlan(plan.plan_type) ? '' : 'btn-hero'}`}
-                    variant={isCurrentPlan(plan.plan_type) ? 'outline' : 'default'}
+                    disabled={current || processingPlan === plan.id}
+                    variant={current ? "outline" : featured ? "secondary" : "default"}
+                    className={cn("mt-8 w-full", !current && !featured && "bg-ink text-canvas hover:bg-ink/90")}
                   >
-                    {processingPlan === plan.id ? (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    ) : null}
-                    {isCurrentPlan(plan.plan_type) 
-                      ? 'Active Plan' 
-                      : plan.price_inr === 0 
-                        ? 'Current Plan' 
-                        : 'Upgrade Now'
-                    }
+                    {processingPlan === plan.id && (
+                      <Loader2 className="animate-spin" />
+                    )}
+                    {current
+                      ? "Active plan"
+                      : plan.price_inr === 0
+                      ? "Current plan"
+                      : "Upgrade now"}
                   </Button>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
-
-        {/* Credit Top-ups - Show for All Users with Plan-Specific Pricing */}
-        {user && (
-          <div className="max-w-6xl mx-auto">
-            <div className="text-center mb-12">
-              <h2 className="text-3xl font-bold mb-4 text-foreground">
-                💳 Credit Top-ups Preview
-              </h2>
-              {subscription?.plan_type === 'free' ? (
-                <div className="space-y-4">
-                  <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-                    Explore our flexible credit packages available with paid plans. 
-                    See how much you can save with Pro and Business discounts!
-                  </p>
-                  <div className="flex flex-wrap justify-center gap-2">
-                    <Badge className="bg-feature-orange/20 text-feature-orange border-feature-orange/30 text-sm px-3 py-1 font-semibold">
-                      ⚠️ Upgrade Required to Purchase
-                    </Badge>
-                    <Badge className="bg-feature-blue/20 text-feature-blue border-feature-blue/30 text-sm px-3 py-1 font-semibold">
-                      🎯 Preview Mode Active
-                    </Badge>
-                  </div>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-                    Add more credits to your account instantly. 
-                    {subscription.topup_discount > 0 ? (
-                      <>Enjoy your {subscription.topup_discount}% discount on all purchases!</>
-                    ) : (
-                      <>Purchase at standard rates.</>
-                    )}
-                  </p>
-                  <div className="flex flex-wrap justify-center gap-2">
-                    <Badge className="bg-feature-green/20 text-feature-green border-feature-green/30 text-sm px-3 py-1 font-semibold">
-                      ✅ Purchase Enabled
-                    </Badge>
-                    {subscription.topup_discount > 0 && (
-                      <Badge className="bg-feature-purple/20 text-feature-purple border-feature-purple/30 text-sm px-3 py-1 font-semibold">
-                        🎉 {subscription.topup_discount}% Discount Active
-                      </Badge>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Enhanced Credit Packages Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
-              {topupPackages.map((pkg) => {
-                const userPlanType = subscription?.plan_type || 'free';
-                const isFreePlan = userPlanType === 'free';
-                
-                // Calculate prices for all plan types for comparison
-                const starterPrice = calculateTopupPrice(pkg.price_inr, 'starter');
-                const proPrice = calculateTopupPrice(pkg.price_inr, 'pro');
-                const businessPrice = calculateTopupPrice(pkg.price_inr, 'business');
-                
-                const currentPrice = isFreePlan ? starterPrice : calculateTopupPrice(pkg.price_inr, userPlanType);
-                const currentDiscount = isFreePlan ? 0 : (subscription?.topup_discount || 0);
-                const savings = currentDiscount > 0 ? pkg.price_inr - currentPrice : 0;
-
-                return (
-                  <Card key={pkg.id} className={`card-glass hover:shadow-lg transition-all duration-300 ${isFreePlan ? 'border-feature-orange/50 shadow-feature-orange/20' : 'border-primary/30 shadow-primary/10'} relative overflow-hidden`}>
-                    {/* Status Indicator */}
-                    <div className={`absolute top-0 right-0 px-3 py-1 text-xs font-semibold rounded-bl-lg ${
-                      isFreePlan 
-                        ? 'bg-gradient-to-r from-feature-orange to-feature-orange/80 text-white' 
-                        : currentDiscount > 0 
-                          ? 'bg-gradient-to-r from-feature-green to-feature-green/80 text-white' 
-                          : 'bg-gradient-to-r from-primary to-primary/80 text-white'
-                    }`}>
-                      {isFreePlan ? '🔒 Preview' : currentDiscount > 0 ? `💰 ${currentDiscount}% OFF` : '💳 Available'}
-                    </div>
-                    
-                    <CardHeader className="text-center pb-4 pt-8">
-                      <div className="flex items-center justify-center gap-2 mb-2">
-                        <MinimalisticIcons.Credits className="h-5 w-5 text-primary" />
-                        <CardTitle className="text-xl font-bold"><span className="text-gradient">{pkg.credits} Credits</span></CardTitle>
-                      </div>
-                      
-                      {/* Current Plan Pricing */}
-                      <CardDescription className="space-y-3">
-                        <div className="space-y-2">
-                          <div className="text-2xl font-bold text-foreground">
-                            {formatPrice(currentPrice)}
-                          </div>
-                          
-                          {isFreePlan ? (
-                            <div className="space-y-1">
-                              <div className="text-sm text-muted-foreground">
-                                Starter plan price
-                              </div>
-                              <Badge className="bg-feature-orange/20 text-feature-orange border-feature-orange/30 text-xs font-semibold">
-                                🔓 Upgrade to Purchase
-                              </Badge>
-                            </div>
-                          ) : (
-                            <div className="space-y-2">
-                              {currentDiscount > 0 ? (
-                                <>
-                                  <div className="text-sm line-through text-muted-foreground">
-                                    {formatPrice(pkg.price_inr)}
-                                  </div>
-                                  <Badge className="bg-feature-green/20 text-feature-green border-feature-green/30 text-xs font-semibold">
-                                    💰 Save {formatPrice(savings)}
-                                  </Badge>
-                                </>
-                              ) : (
-                                <div className="text-sm text-muted-foreground">
-                                  Standard pricing
-                                </div>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      </CardDescription>
-                    </CardHeader>
-                    
-                    <CardContent className="space-y-4">
-                      {/* Price Comparison Table */}
-                      <div className="bg-muted/30 rounded-lg p-3 space-y-2">
-                        <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide text-center mb-2">
-                          Pricing by Plan Type
-                        </div>
-                        <div className="grid grid-cols-2 gap-2 text-xs">
-                          <div className={`flex justify-between p-2 rounded ${userPlanType === 'starter' ? 'bg-feature-blue/20 border border-feature-blue/30 text-feature-blue' : 'bg-background/50'}`}>
-                            <span className="text-feature-blue font-medium">Starter:</span>
-                            <span className="font-semibold">{formatPrice(starterPrice)}</span>
-                          </div>
-                          <div className={`flex justify-between p-2 rounded ${userPlanType === 'pro' ? 'bg-feature-purple/20 border border-feature-purple/30 text-feature-purple' : 'bg-background/50'}`}>
-                            <span className="text-feature-purple font-medium">Pro:</span>
-                            <span className="font-semibold">{formatPrice(proPrice)}</span>
-                          </div>
-                          <div className={`flex justify-between p-2 rounded ${userPlanType === 'business' ? 'bg-feature-orange/20 border border-feature-orange/30 text-feature-orange' : 'bg-background/50'} col-span-2`}>
-                            <span className="text-feature-orange font-medium">Business:</span>
-                            <span className="font-semibold">{formatPrice(businessPrice)}</span>
-                          </div>
-                        </div>
-                      </div>
-                      
-                      {/* Action Button */}
-                      <Button
-                        onClick={() => isFreePlan ? null : handleTopup(pkg)}
-                        disabled={isFreePlan}
-                        className={`w-full ${
-                          isFreePlan 
-                            ? 'bg-feature-orange/20 hover:bg-feature-orange/30 text-feature-orange border-feature-orange/30 cursor-not-allowed' 
-                            : 'btn-hero'
-                        }`}
-                      >
-                        {isFreePlan ? (
-                          <>
-                            <MinimalisticIcons.Warning className="mr-2 h-4 w-4" />
-                            Upgrade to Purchase
-                          </>
-                        ) : (
-                          <>
-                            <MinimalisticIcons.Credits className="mr-2 h-4 w-4" />
-                            Buy {pkg.credits} Credits
-                          </>
-                        )}
-                      </Button>
-                    </CardContent>
-                  </Card>
+                </article>
                 );
               })}
             </div>
-            
-            {/* Enhanced Top-up Pricing Summary */}
-            <div className="bg-card/50 p-8 rounded-xl border border-border/50 shadow-lg">
-              <div className="text-center mb-6">
-                <h3 className="text-2xl font-bold mb-2 text-foreground">
-                  🎯 Top-up Discounts by Plan
-                </h3>
-                <p className="text-muted-foreground">
-                  See how much you can save with different subscription plans
+          )}
+
+          {/* top-ups */}
+          {user && (
+            <div className="mt-20">
+              <div className="mb-10 max-w-2xl">
+                <p className="section-label mb-3">Credit top-ups</p>
+                <h2 className="display-md">Top up without changing plan.</h2>
+                <p className="body-md mt-3 text-muted">
+                  {isFreePlan
+                    ? "You are viewing top-ups in preview mode. Upgrade to a paid plan to purchase credits."
+                    : subscription?.topup_discount
+                    ? `Your plan takes ${subscription.topup_discount}% off every top-up.`
+                    : "Purchased at standard rates."}
                 </p>
               </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className={`relative p-4 rounded-lg border transition-all duration-300 ${
-                  subscription?.plan_type === 'free' 
-                    ? 'border-feature-orange/50 bg-feature-orange/10 shadow-lg transform scale-105' 
-                    : 'border-border/30 bg-background/50 hover:border-feature-orange/30'
-                }`}>
-                  {subscription?.plan_type === 'free' && (
-                    <div className="absolute -top-2 -right-2 bg-feature-orange text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center">
-                      ✓
-                    </div>
-                  )}
-                  <div className="text-center space-y-2">
-                    <div className="font-bold text-feature-orange text-lg">Free Plan</div>
-                    <div className="text-muted-foreground text-sm">No top-ups available</div>
-                    <Badge className="bg-feature-orange/20 text-feature-orange border-feature-orange/30 text-xs font-semibold">
-                      🔒 Upgrade Required
-                    </Badge>
-                  </div>
+
+              {topupPackages.length === 0 ? (
+                <div className="card col-span-full flex flex-col items-center gap-3 p-12 text-center">
+                  <p className="title-md">No top-up packages available</p>
+                  <p className="body-sm max-w-sm text-muted">
+                    Credit packages could not be loaded. Check your connection
+                    and try again.
+                  </p>
+                  <Button variant="secondary" onClick={fetchPlansAndPackages}>
+                    Retry
+                  </Button>
                 </div>
-                
-                <div className={`relative p-4 rounded-lg border transition-all duration-300 ${
-                  subscription?.plan_type === 'starter' 
-                    ? 'border-feature-blue/50 bg-feature-blue/10 shadow-lg transform scale-105' 
-                    : 'border-border/30 bg-background/50 hover:border-feature-blue/30'
-                }`}>
-                  {subscription?.plan_type === 'starter' && (
-                    <div className="absolute -top-2 -right-2 bg-feature-blue text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center">
-                      ✓
+              ) : (
+              <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                {topupPackages.map((pkg) => {
+                  const starterPrice = calculateTopupPrice(
+                    pkg.price_inr,
+                    "starter"
+                  );
+                  const proPrice = calculateTopupPrice(pkg.price_inr, "pro");
+                  const businessPrice = calculateTopupPrice(
+                    pkg.price_inr,
+                    "business"
+                  );
+                  const currentPrice = isFreePlan
+                    ? starterPrice
+                    : calculateTopupPrice(pkg.price_inr, userPlanType);
+                  const currentDiscount =
+                    userPlanType === "business"
+                      ? 20
+                      : userPlanType === "pro"
+                      ? 10
+                      : 0;
+                  const savings = pkg.price_inr - currentPrice;
+
+                  return (
+                    <article
+                      key={pkg.id}
+                      className="card p-8"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <p className="display-sm">
+                          {pkg.credits} credits
+                        </p>
+                        {isFreePlan ? (
+                          <span className="pill-badge">Preview</span>
+                        ) : currentDiscount > 0 ? (
+                          <span className="pill-badge">
+                            {currentDiscount}% off
+                          </span>
+                        ) : (
+                          <span className="pill-badge">Available</span>
+                        )}
+                      </div>
+
+                      <p className="display-md mt-6">{formatPrice(currentPrice)}</p>
+                      {isFreePlan ? (
+                        <p className="body-sm mt-1 text-muted">
+                          Starter plan price
+                        </p>
+                      ) : currentDiscount > 0 ? (
+                        <p className="body-sm mt-1 text-muted">
+                          <span className="line-through">
+                            {formatPrice(pkg.price_inr)}
+                          </span>{" "}
+                          · save {formatPrice(savings)}
+                        </p>
+                      ) : (
+                        <p className="body-sm mt-1 text-muted">
+                          Standard pricing
+                        </p>
+                      )}
+
+                      {/* price per credit by plan */}
+                      <dl className="mt-6 space-y-px overflow-hidden rounded-md border border-hairline bg-hairline">
+                        {[
+                          { key: "starter", label: "Starter", price: starterPrice },
+                          { key: "pro", label: "Pro", price: proPrice },
+                          { key: "business", label: "Business", price: businessPrice },
+                        ].map((row) => {
+                          const active = userPlanType === row.key;
+                          return (
+                            <div
+                              key={row.key}
+                              className={cn(
+                                "flex items-center justify-between gap-3 px-4 py-2.5",
+                                active ? "bg-ink text-canvas" : "bg-card"
+                              )}
+                            >
+                              <dt className="body-sm">
+                                {row.label}
+                                {active && (
+                                  <span className="caption-upper ml-2 opacity-60">
+                                    Yours
+                                  </span>
+                                )}
+                              </dt>
+                              <dd className="code tabular-nums">
+                                {formatPrice(row.price)}
+                              </dd>
+                            </div>
+                          );
+                        })}
+                      </dl>
+
+                      <Button
+                        onClick={() => handleTopup(pkg)}
+                        disabled={isFreePlan}
+                        variant={isFreePlan ? "outline" : "default"}
+                        className="mt-6 w-full"
+                      >
+                        {isFreePlan ? (
+                          <>
+                            <Lock />
+                            Upgrade to purchase
+                          </>
+                        ) : (
+                          `Buy ${pkg.credits} credits`
+                        )}
+                      </Button>
+                    </article>
+                  );
+                })}
+              </div>
+              )}
+
+              {/* discount matrix */}
+              <div className="mt-12">
+                <p className="section-label mb-6">Top-up discounts by plan</p>
+                <div className="grid grid-cols-1 gap-px overflow-hidden rounded-lg border border-hairline bg-hairline sm:grid-cols-2 lg:grid-cols-4">
+                  {[
+                    {
+                      name: "Free Plan",
+                      line: "No top-ups available",
+                      badge: "Upgrade required",
+                      active: userPlanType === "free",
+                    },
+                    {
+                      name: "Starter Plan",
+                      line: "Standard pricing",
+                      badge: "0% discount",
+                      active: userPlanType === "starter",
+                    },
+                    {
+                      name: "Pro Plan",
+                      line: "10% off all top-ups",
+                      badge: "Good value",
+                      active: userPlanType === "pro",
+                    },
+                    {
+                      name: "Business Plan",
+                      line: "20% off all top-ups",
+                      badge: "Best savings",
+                      active: userPlanType === "business",
+                    },
+                  ].map((row) => (
+                    <div
+                      key={row.name}
+                      className={cn(
+                        "flex flex-col gap-2 p-6",
+                        row.active ? "bg-ink text-canvas" : "bg-card"
+                      )}
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        <p className="title-md">{row.name}</p>
+                        {row.active && <Check className="h-4 w-4" />}
+                      </div>
+                      <p
+                        className={cn(
+                          "body-sm",
+                          row.active ? "text-canvas/70" : "text-muted"
+                        )}
+                      >
+                        {row.line}
+                      </p>
+                      <span
+                        className={cn(
+                          "caption-upper mt-2 self-start rounded-full px-2.5 py-1",
+                          row.active
+                            ? "border border-white/25"
+                            : "bg-surface-strong text-ink"
+                        )}
+                      >
+                        {row.badge}
+                      </span>
                     </div>
-                  )}
-                  <div className="text-center space-y-2">
-                    <div className="font-bold text-feature-blue text-lg">Starter Plan</div>
-                    <div className="text-muted-foreground text-sm">Standard pricing</div>
-                    <Badge className="bg-feature-blue/20 text-feature-blue border-feature-blue/30 text-xs font-semibold">
-                      💳 0% Discount
-                    </Badge>
-                  </div>
-                </div>
-                
-                <div className={`relative p-4 rounded-lg border transition-all duration-300 ${
-                  subscription?.plan_type === 'pro' 
-                    ? 'border-feature-purple/50 bg-feature-purple/10 shadow-lg transform scale-105' 
-                    : 'border-border/30 bg-background/50 hover:border-feature-purple/30'
-                }`}>
-                  {subscription?.plan_type === 'pro' && (
-                    <div className="absolute -top-2 -right-2 bg-feature-purple text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center">
-                      ✓
-                    </div>
-                  )}
-                  <div className="text-center space-y-2">
-                    <div className="font-bold text-feature-purple text-lg">Pro Plan</div>
-                    <div className="text-feature-green font-semibold text-sm">💰 10% OFF all top-ups</div>
-                    <Badge className="bg-feature-green/20 text-feature-green border-feature-green/30 text-xs font-semibold">
-                      🎆 Great Value
-                    </Badge>
-                  </div>
-                </div>
-                
-                <div className={`relative p-4 rounded-lg border transition-all duration-300 ${
-                  subscription?.plan_type === 'business' 
-                    ? 'border-feature-yellow/50 bg-feature-yellow/10 shadow-lg transform scale-105' 
-                    : 'border-border/30 bg-background/50 hover:border-feature-yellow/30'
-                }`}>
-                  {subscription?.plan_type === 'business' && (
-                    <div className="absolute -top-2 -right-2 bg-feature-yellow text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center">
-                      ✓
-                    </div>
-                  )}
-                  <div className="text-center space-y-2">
-                    <div className="font-bold text-feature-yellow text-lg">Business Plan</div>
-                    <div className="text-feature-green font-semibold text-sm">🎉 20% OFF all top-ups</div>
-                    <Badge className="bg-feature-green/20 text-feature-green border-feature-green/30 text-xs font-semibold">
-                      🚀 Best Savings
-                    </Badge>
-                  </div>
+                  ))}
                 </div>
               </div>
-              
-              {/* Savings Calculator for Free Users */}
-              {subscription?.plan_type === 'free' && topupPackages.length > 0 && (
-                <div className="mt-6 p-4 bg-gradient-to-r from-primary/10 to-feature-purple/10 border border-primary/20 rounded-lg">
-                  <h4 className="text-lg font-semibold mb-3 text-center text-gradient">💡 Potential Savings Calculator</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+
+              {/* free-user savings calculator */}
+              {isFreePlan && topupPackages.length > 0 && (
+                <div className="card mt-12 p-8">
+                  <p className="section-label mb-6">What upgrading would save</p>
+                  <div className="grid grid-cols-1 gap-px overflow-hidden rounded-md border border-hairline bg-hairline md:grid-cols-2">
                     {topupPackages.map((pkg) => {
-                      const starterPrice = calculateTopupPrice(pkg.price_inr, 'starter');
-                      const proPrice = calculateTopupPrice(pkg.price_inr, 'pro');
-                      const businessPrice = calculateTopupPrice(pkg.price_inr, 'business');
-                      const proSavings = starterPrice - proPrice;
-                      const businessSavings = starterPrice - businessPrice;
-                      
+                      const proSavings =
+                        pkg.price_inr - calculateTopupPrice(pkg.price_inr, "pro");
+                      const businessSavings =
+                        pkg.price_inr -
+                        calculateTopupPrice(pkg.price_inr, "business");
                       return (
-                        <div key={pkg.id} className="bg-background/50 p-3 rounded border border-border/30">
-                          <div className="font-medium text-foreground mb-2">{pkg.credits} Credits Package</div>
-                          <div className="space-y-1">
-                            <div className="flex justify-between">
-                              <span className="text-muted-foreground">Pro Plan:</span>
-                              <span className="text-feature-green font-medium">💰 Save {formatPrice(proSavings)}</span>
+                        <div key={pkg.id} className="bg-card p-5">
+                          <p className="title-sm">
+                            {pkg.credits} credit package
+                          </p>
+                          <div className="mt-3 space-y-1.5">
+                            <div className="flex items-center justify-between gap-3">
+                              <span className="body-sm text-muted">Pro plan</span>
+                              <span className="code text-success">
+                                save {formatPrice(proSavings)}
+                              </span>
                             </div>
-                            <div className="flex justify-between">
-                              <span className="text-muted-foreground">Business:</span>
-                              <span className="text-feature-green font-medium">🎉 Save {formatPrice(businessSavings)}</span>
+                            <div className="flex items-center justify-between gap-3">
+                              <span className="body-sm text-muted">Business</span>
+                              <span className="code text-success">
+                                save {formatPrice(businessSavings)}
+                              </span>
                             </div>
                           </div>
                         </div>
                       );
                     })}
                   </div>
-                  <div className="text-center mt-4">
-                    <p className="text-xs text-muted-foreground">
-                      * Savings compared to Starter plan pricing
-                    </p>
-                  </div>
+                  <p className="body-sm mt-5 text-muted-soft">
+                    Compared with Starter plan pricing on the same package.
+                  </p>
                 </div>
               )}
             </div>
-          </div>
-        )}
+          )}
 
-        {/* Enhanced CTA for Free Users */}
-        {user && subscription?.plan_type === 'free' && (
-          <div className="max-w-4xl mx-auto mt-12">
-            <Card className="border-border/50 bg-card/50">
-              <CardContent className="p-8 text-center">
-                <div className="flex justify-center mb-6">
-                  <div className="p-4 bg-muted/50 rounded-full">
-                    <MinimalisticIcons.Credits className="h-8 w-8 text-muted-foreground" />
-                  </div>
-                </div>
-                
-                <h3 className="text-2xl font-bold mb-4 text-foreground">
-                  Unlock Premium Credit Features
-                </h3>
-                
-                <p className="text-lg text-muted-foreground mb-6 max-w-2xl mx-auto">
-                  You're currently viewing top-ups in preview mode. Upgrade to any paid plan to unlock instant credit purchases, 
-                  bonus credits, and exclusive discounts that can save you hundreds of rupees!
-                </p>
-                
-                {/* Feature comparison */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-                  <div className="p-4 bg-muted/20 border border-border/30 rounded-lg">
-                    <MinimalisticIcons.Close className="h-6 w-6 text-muted-foreground mx-auto mb-2" />
-                    <h4 className="font-semibold text-muted-foreground mb-1">Free Plan</h4>
-                    <p className="text-sm text-muted-foreground">No credit purchases</p>
-                    <p className="text-sm text-muted-foreground">10 one-time credits</p>
-                  </div>
-                  
-                  <div className="p-4 bg-muted/20 border border-border/30 rounded-lg">
-                    <MinimalisticIcons.Starter className="h-6 w-6 text-muted-foreground mx-auto mb-2" />
-                    <h4 className="font-semibold text-muted-foreground mb-1">Starter Plan</h4>
-                    <p className="text-sm text-muted-foreground">Credit top-ups enabled</p>
-                    <p className="text-sm text-muted-foreground">60 monthly credits</p>
-                  </div>
-                  
-                  <div className="p-4 bg-muted/20 border border-border/30 rounded-lg">
-                    <MinimalisticIcons.Pro className="h-6 w-6 text-muted-foreground mx-auto mb-2" />
-                    <h4 className="font-semibold text-muted-foreground mb-1">Pro/Business</h4>
-                    <p className="text-sm text-muted-foreground">10-20% top-up discounts</p>
-                    <p className="text-sm text-muted-foreground">120-400 monthly credits</p>
-                  </div>
-                </div>
-                
-                {/* Savings showcase */}
-                {topupPackages.length > 0 && (
-                  <div className="bg-muted/20 border border-border/30 rounded-lg p-4 mb-6">
-                    <h4 className="font-semibold text-muted-foreground mb-3">Example: What You Could Save</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-                      {topupPackages.slice(0, 2).map((pkg) => {
-                        const starterPrice = calculateTopupPrice(pkg.price_inr, 'starter');
-                        const businessPrice = calculateTopupPrice(pkg.price_inr, 'business');
-                        const maxSavings = starterPrice - businessPrice;
-                        
-                        return (
-                          <div key={pkg.id} className="flex justify-between items-center bg-background/50 p-2 rounded">
-                            <span className="text-muted-foreground">{pkg.credits} credits with Business:</span>
-                            <span className="font-semibold text-muted-foreground">Save {formatPrice(maxSavings)}</span>
-                          </div>
-                        );
-                      })}
+          {/* free-user CTA */}
+          {user && isFreePlan && (
+            <section className="mt-20">
+              <div className="card overflow-hidden">
+                <div className="grid grid-cols-1 gap-px bg-hairline md:grid-cols-3">
+                  {[
+                    {
+                      title: "Free Plan",
+                      lines: ["No credit purchases", "10 one-time credits"],
+                    },
+                    {
+                      title: "Starter Plan",
+                      lines: ["Credit top-ups enabled", "60 monthly credits"],
+                    },
+                    {
+                      title: "Pro / Business",
+                      lines: ["10–20% top-up discounts", "120–400 monthly credits"],
+                    },
+                  ].map((column) => (
+                    <div key={column.title} className="bg-card p-8">
+                      <p className="title-md">{column.title}</p>
+                      <ul className="mt-4 space-y-2">
+                        {column.lines.map((line) => (
+                          <li key={line} className="body-sm text-muted">
+                            {line}
+                          </li>
+                        ))}
+                      </ul>
                     </div>
-                  </div>
-                )}
-                
-                <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                  <Button 
-                    onClick={() => document.querySelector('[data-plan="starter"]')?.scrollIntoView({ behavior: 'smooth' })} 
-                    className="btn-hero text-lg px-8 py-3"
-                  >
-                    <MinimalisticIcons.Starter className="mr-2 h-5 w-5" />
-                    View Starter Plan
-                  </Button>
-                  <Button 
-                    onClick={() => document.querySelector('[data-plan="pro"]')?.scrollIntoView({ behavior: 'smooth' })} 
-                    variant="outline"
-                    className="border-border/50 hover:bg-muted/10 text-lg px-8 py-3"
-                  >
-                    <MinimalisticIcons.Pro className="mr-2 h-5 w-5" />
-                    See Pro Benefits
-                  </Button>
+                  ))}
                 </div>
-                
-                <p className="text-xs text-muted-foreground mt-4">
-                  All paid plans include bonus credits and monthly renewals
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-        )}
-      </div>
-    </div>
+                <div className="flex flex-col items-start gap-4 border-t border-hairline p-8 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <p className="title-md">Unlock credit purchases</p>
+                    <p className="body-sm mt-1 text-muted">
+                      Paid plans renew monthly, include bonus credits, and
+                      discount every top-up.
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap gap-3">
+                    <Button
+                      onClick={() =>
+                        document
+                          .querySelector('[data-plan="starter"]')
+                          ?.scrollIntoView({ behavior: "smooth" })
+                      }
+                    >
+                      View Starter
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() =>
+                        document
+                          .querySelector('[data-plan="pro"]')
+                          ?.scrollIntoView({ behavior: "smooth" })
+                    }
+                    >
+                      See Pro benefits
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </section>
+          )}
+        </div>
+      </section>
+
+      <Footer />
+    </main>
   );
 };
 

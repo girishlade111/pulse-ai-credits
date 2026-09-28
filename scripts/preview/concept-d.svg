@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bg-d" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#191815" />
+      <stop offset="100%" stop-color="#0B0A09" />
+    </linearGradient>
+
+    <linearGradient id="border-d" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FF7528" stop-opacity="0.8" />
+      <stop offset="100%" stop-color="#24221D" stop-opacity="0.3" />
+    </linearGradient>
+
+    <radialGradient id="aura-d" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#F54E00" stop-opacity="0.3" />
+      <stop offset="100%" stop-color="#F54E00" stop-opacity="0" />
+    </radialGradient>
+
+    <linearGradient id="pulse-d" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#D04200" />
+      <stop offset="30%" stop-color="#F54E00" />
+      <stop offset="70%" stop-color="#FFA24A" />
+      <stop offset="100%" stop-color="#FFD4A8" />
+    </linearGradient>
+
+    <filter id="shadow-d" x="-10%" y="-10%" width="125%" height="125%">
+      <feDropShadow dx="0" dy="10" stdDeviation="14" flood-color="#000000" flood-opacity="0.7" />
+    </filter>
+  </defs>
+
+  <rect width="512" height="512" rx="120" fill="url(#bg-d)" />
+  <rect width="510" height="510" x="1" y="1" rx="119" fill="none" stroke="url(#border-d)" stroke-width="2" />
+  <circle cx="256" cy="256" r="180" fill="url(#aura-d)" />
+
+  <g filter="url(#shadow-d)" transform="translate(18, 0)">
+    <!-- Vertical stem -->
+    <path d="M 150 136 L 150 376" 
+          stroke="url(#pulse-d)" 
+          stroke-width="38" 
+          stroke-linecap="round" />
+
+    <!-- Pure geometric pulse that forms the upper loop of P -->
+    <path d="M 150 148 L 246 148 L 282 226 L 318 108 L 358 266 L 392 186 L 406 200 C 406 270, 340 286, 270 286 L 150 286"
+          fill="none"
+          stroke="url(#pulse-d)"
+          stroke-width="32"
+          stroke-linecap="round"
+          stroke-linejoin="round" />
+
+    <!-- Floating AI Sparkle -->
+    <path d="M 318 80 Q 318 96 302 96 Q 318 96 318 112 Q 318 96 334 96 Q 318 96 318 80 Z"
+          fill="#FFFFFF" />
+  </g>
+</svg>

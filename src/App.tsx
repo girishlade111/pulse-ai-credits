@@ -24,10 +24,13 @@ const App = () => {
       <TooltipProvider>
         <AuthProvider>
           <BrowserRouter>
-            <div className="min-h-screen bg-gradient-hero">
+            <div className="min-h-screen bg-canvas">
               {!isChatMode && <Navbar />}
               <Routes>
-                <Route path="/" element={<Index onChatModeChange={setIsChatMode} />} />
+                <Route
+                  path="/"
+                  element={<Index onChatModeChange={setIsChatMode} />}
+                />
                 <Route path="/auth" element={<Auth />} />
                 <Route path="/plans" element={<Plans />} />
                 <Route path="/dashboard" element={<Dashboard />} />
