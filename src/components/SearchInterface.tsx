@@ -44,7 +44,7 @@ import {
   revokeAttachments,
   validateFile,
 } from "@/lib/chat-files";
-import { useChatSessions } from "@/lib/chat-store";
+import { readChatView, useChatSessions, writeChatView } from "@/lib/chat-store";
 import { uid, type ChatAttachment, type ChatMessage } from "@/lib/chat-types";
 import { cn } from "@/lib/utils";
 import { AlertTriangle, Menu, PanelLeftOpen } from "lucide-react";
@@ -105,13 +105,21 @@ export const SearchInterface: React.FC<SearchInterfaceProps> = ({ onResultsChang
   const [modeId, setModeId] = React.useState<string>(DEFAULT_MODE_ID);
   const [attachments, setAttachments] = React.useState<ChatAttachment[]>([]);
   const [busy, setBusy] = React.useState(false);
-  const [chatMode, setChatMode] = React.useState(false);
+  const [chatMode, setChatModeState] = React.useState(readChatView);
   const [sidebarOpen, setSidebarOpen] = React.useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = React.useState(false);
   const [dragActive, setDragActive] = React.useState(false);
   const [copied, setCopied] = React.useState<Set<string>>(new Set());
   const [showUpgrade, setShowUpgrade] = React.useState(false);
   const [showTopup, setShowTopup] = React.useState(false);
+  const [focusToken, setFocusToken] = React.useState(0);
+
+  // One place to enter the chat, so the persisted "user is in a chat" flag and
+  // the page shell can never disagree about which view is mounted.
+  const setChatMode = React.useCallback((next: boolean) => {
+    writeChatView(next);
+    setChatModeState(next);
+  }, []);
 
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const abortRef = React.useRef<AbortController | null>(null);

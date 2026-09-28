@@ -133,8 +133,6 @@ export const useChatSessions = (): ChatStore => {
           STORAGE_KEY,
           JSON.stringify({ sessions: state.sessions, activeId: state.activeId })
         );
-        if (state.activeId) window.localStorage.setItem(ACTIVE_KEY, state.activeId);
-        else window.localStorage.removeItem(ACTIVE_KEY);
       } catch {
         // Storage full or blocked — the in-memory chat still works.
       }
