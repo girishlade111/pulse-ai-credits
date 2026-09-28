@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -225,7 +224,7 @@ const Plans: React.FC = () => {
   };
 
   const isCurrentPlan = (planType: string) => {
-    return subscription?.plan_type === planType;
+    return subscription.plan_type === planType;
   };
 
   // Calculate base and bonus credits for paid plans
@@ -328,7 +327,7 @@ const Plans: React.FC = () => {
     );
   }
 
-  const userPlanType = subscription?.plan_type || "free";
+  const userPlanType = subscription.plan_type || "free";
   const isFreePlan = userPlanType === "free";
   const visiblePlans = getFilteredPlans();
 
