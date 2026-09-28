@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
+import { supabase } from "@/integrations/supabase/client";
 import { MinimalisticIcons } from "@/components/ui/minimalistic-icons";
 import { Footer } from "@/components/layout/Footer";
 import { cn } from "@/lib/utils";
