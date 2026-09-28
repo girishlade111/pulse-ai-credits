@@ -68,15 +68,21 @@ const main = async () => {
   const reply = page.locator(".bubble-agent").first();
   await reply.waitFor({ state: "visible", timeout: 30000 });
 
-  // Sample repeatedly: prove the body grows while tokens arrive.
+  // Sample while streaming. The pre-token skeleton is a constant height, so a
+  // single unchanged sample means nothing — only stop once the turn is done.
   const lengths = [];
-  for (let i = 0; i < 25; i += 1) {
+  for (let i = 0; i < 120; i += 1) {
     lengths.push((await reply.innerText()).length);
-    if (lengths.length > 2 && lengths[lengths.length - 1] === lengths[lengths.length - 2]) break;
-    await page.waitForTimeout(200);
+    const status = await reply.getAttribute("data-chat-status");
+    if (status === "complete") break;
+    await page.waitForTimeout(150);
   }
-  const grew = lengths[lengths.length - 1] > lengths[0];
-  check("reply streams in incrementally", grew, `${lengths.join(" -> ")} chars`);
+  const firstText = lengths.findIndex((n) => n > 90);
+  const grew =
+    firstText !== -1 && firstText < lengths.length - 1
+      ? lengths[lengths.length - 1] > lengths[firstText]
+      : false;
+  check("reply streams in incrementally", grew, `${firstText >= 0 ? lengths.slice(firstText).join(" -> ") : lengths.join(" -> ")} chars`);
   check("reply has substantial content", lengths[lengths.length - 1] > 200, `${lengths.at(-1)} chars`);
 
   const listItems = await reply.locator("ul li").count();
