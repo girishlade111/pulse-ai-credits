@@ -78,17 +78,39 @@ const apinexProxy = (options: ApinexOptions): Plugin => ({
           headers: {
             Authorization: `Bearer ${options.apiKey}`,
             "Content-Type": "application/json",
+            Accept: "text/event-stream",
           },
           body: JSON.stringify(payload),
           signal: controller.signal,
         });
 
+        const contentType = upstream.headers.get("Content-Type") ?? "application/json";
+
+        // Streamed replies must not be buffered, otherwise the chat sits on a
+        // spinner with nothing on screen. Pipe the upstream body straight
+        // through and flush each chunk as it lands.
+        if (upstream.body && contentType.includes("text/event-stream")) {
+          res.statusCode = upstream.status;
+          res.setHeader("Content-Type", contentType);
+          res.setHeader("Cache-Control", "no-cache, no-transform");
+          res.setHeader("Connection", "keep-alive");
+          res.setHeader("X-Accel-Buffering", "no");
+          res.flushHeaders?.();
+
+          const reader = upstream.body.getReader();
+          for (;;) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            res.write(Buffer.from(value));
+            res.flush?.();
+          }
+          res.end();
+          return;
+        }
+
         const text = await upstream.text();
         res.statusCode = upstream.status;
-        res.setHeader(
-          "Content-Type",
-          upstream.headers.get("Content-Type") ?? "application/json"
-        );
+        res.setHeader("Content-Type", contentType);
         res.end(text);
       } catch (error) {
         const aborted = error instanceof Error && error.name === "AbortError";
