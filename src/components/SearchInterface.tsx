@@ -16,6 +16,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
+import { complete, LlmError, type LlmRequestType } from "@/lib/llm";
 import { useNavigate } from "react-router-dom";
 import { MinimalisticIcons } from "@/components/ui/minimalistic-icons";
 import { TimelinePill, type TimelineStage } from "@/components/TimelinePill";
@@ -591,16 +592,7 @@ export const SearchInterface: React.FC<SearchInterfaceProps> = ({
   };
 
   const handleSearch = React.useCallback(
-    async (
-      requestType:
-        | "quick_search"
-        | "deep_research"
-        | "image_generation"
-        | "pro_search"
-        | "task"
-        | "deep_research_8x"
-        | "find_all"
-    ) => {
+    async (requestType: LlmRequestType) => {
       // Premium feature gate
       const premiumFeatures = ["deep_research_8x", "find_all"];
       if (premiumFeatures.includes(requestType) && subscription.plan_type !== "business") {
@@ -641,16 +633,6 @@ export const SearchInterface: React.FC<SearchInterfaceProps> = ({
           find_all: "normal_search",
         };
 
-        // Deduct credits and record the run in the local ledger
-        spend({
-          amount: creditsRequired,
-          request_type: requestTypeMap[requestType],
-          description: `${requestType.replace("_", " ")} request: ${query.substring(
-            0,
-            50
-          )}...`,
-        });
-
         // Build attachment analysis block
         let fileAnalysis = "";
         if (attachedFiles.length > 0) {
@@ -685,38 +667,27 @@ export const SearchInterface: React.FC<SearchInterfaceProps> = ({
           fileAnalysis += `\n**AI Integration**: All attached files have been processed and their content is available for analysis, questions, and discussion.\n`;
         }
 
-        // Generate mock result based on request type
-        let mockResult = "";
-        switch (requestType) {
-          case "quick_search":
-            mockResult = `# Quick Search Results for "${query}"\n\n## Key Findings:\n\n• **Direct Answer**: The information you requested is readily available and well-documented.\n• **Relevant Information**: Multiple authoritative sources provide consistent data on this topic.\n• **Quick Facts**: Key statistics and dates align with the most recent available records.\n\n## Summary:\n\nThis is a comprehensive yet concise response that provides you with the most important information related to your search query.${fileAnalysis}`;
-            break;
-          case "deep_research":
-            mockResult = `# Deep Research Analysis: "${query}"\n\n## Executive Summary:\n\n• **Comprehensive Analysis**: Detailed investigation reveals a nuanced picture with several distinct perspectives.\n• **Source Verification**: All claims have been cross-referenced against primary sources.\n• **Detailed Insights**: Patterns emerge clearly when examining the data chronologically.\n\n## Key Findings:\n\n• **Primary Research**: Strong evidence supports the main hypothesis.\n• **Supporting Data**: Multiple datasets corroborate the findings.\n• **Expert Opinions**: Specialists broadly agree on the interpretation.\n• **Related Topics**: Adjacent areas provide useful context.\n\n## Conclusion:\n\nDetailed research provides comprehensive understanding with actionable insights and recommendations for next steps.${fileAnalysis}`;
-            break;
-          case "image_generation":
-            mockResult = `# Image Generation Complete: "${query}"\n\n## Generated Content:\n\n• **High-Quality Image**: Generated at production resolution with attention to detail.\n• **Style Applied**: Artistic direction matched to your description.\n• **Format Details**: Optimized for both digital and print use.\n\n## Image Specifications:\n\n• **Prompt Used**: ${query}\n• **Generation Time**: ~30 seconds\n• **Quality**: High fidelity with sharp details\n• **Usage Rights**: Full commercial usage included\n\n## Next Steps:\n\n• Download and use immediately in your project\n• Request variations if you need alternative styles\n• Generate additional images with modified prompts${fileAnalysis}`;
-            break;
-          case "pro_search":
-            mockResult = `# Pro Search Results: "${query}"\n\n## Curated Sources:\n\n• **Primary Sources**: Authoritative documentation and official publications.\n• **Academic References**: Peer-reviewed research relevant to the query.\n• **Industry Reports**: Market data and analysis from recognized institutions.\n• **Technical Sources**: Implementation details and specifications.\n\n## Search Analytics:\n\n• **Sources Analyzed**: 50+ relevant documents\n• **Relevance Score**: 95% precision\n• **Authority Rating**: High confidence sources\n• **Freshness**: Current within the last 12 months\n\n## Recommended Actions:\n\n• Review the primary sources first for authoritative information\n• Cross-reference technical specifications across multiple sources\n• Use academic references for theoretical context${fileAnalysis}`;
-            break;
-          case "task":
-            mockResult = `# Task Execution Plan: "${query}"\n\n## Task Breakdown:\n\n• **Step 1**: Analyze input requirements and define success criteria\n• **Step 2**: Gather and validate source data from authoritative sources\n• **Step 3**: Process and enrich entities with quality checks\n• **Step 4**: Structure the output for direct use in your workflow\n• **Step 5**: Verify output quality and completeness\n\n## Timeline & Resources:\n\n• **Phase 1**: Planning and setup\n• **Phase 2**: Data collection and processing\n• **Phase 3**: Quality assurance\n• **Phase 4**: Final delivery\n\n## Next Steps:\n\n• Review the completed dataset\n• Integrate results into your existing systems\n• Schedule follow-up tasks as needed${fileAnalysis}`;
-            break;
-          case "deep_research_8x":
-            mockResult = `# 8x Deep Research Report: "${query}"\n\n## Research Methodology:\n\n• **Approach**: Eight-phase exhaustive investigation\n• **Scope**: Comprehensive coverage across all relevant domains\n• **Verification**: Multi-source cross-validation at every stage\n• **Documentation**: Full methodology recorded for reproducibility\n\n## Detailed Findings:\n\n• **Finding 1**: Primary evidence strongly supports the initial hypothesis\n• **Finding 2**: Secondary data confirms patterns across regions\n• **Finding 3**: Historical context reveals important nuances\n• **Finding 4**: Comparative analysis highlights divergent outcomes\n• **Finding 5**: Stakeholder perspectives vary meaningfully\n• **Finding 6**: Quantitative data corroborates qualitative findings\n• **Finding 7**: Recent developments shift the interpretation\n• **Finding 8**: Remaining gaps documented for future research\n\n## Comprehensive Insights:\n\nThis report provides exhaustive analysis suitable for strategic decision-making, academic publication, or executive briefing.${fileAnalysis}`;
-            break;
-          case "find_all":
-            mockResult = `# Find All - Complete Dataset: "${query}"\n\n## Dataset Overview:\n\n• **Total Records**: 10,000+ entities compiled\n• **Accuracy**: 99.5% verified accuracy rate\n• **Coverage**: Comprehensive web-wide gathering\n• **Structure**: Ready for direct import\n\n## Data Categories:\n\n• **Primary identifiers** and canonical names\n• **Contact and location data** where publicly available\n• **Classification and categorical attributes\n• **Temporal data** including creation and update timestamps\n• **Source attribution** for every record\n• **Quality scores** on a per-record basis\n• **Relationship mapping** between entities\n• **Confidence indicators** for ambiguous matches\n• **Deduplication results** and merge history\n• **Export-ready formatting** in multiple schemas\n\n## Export Options:\n\n• **CSV**: Comma-separated values for spreadsheets\n• **JSON**: Structured data for applications\n• **PDF**: Formatted report for presentation\n• **API**: Direct integration endpoint\n\n## Quality Assurance:\n\nEvery record has been validated against multiple sources with conflicts flagged rather than silently resolved.${fileAnalysis}`;
-            break;
-          default:
-            mockResult = `# Results for "${query}"\n\n## Analysis\n\n• **Response**: Comprehensive analysis of your query\n• **Confidence**: High confidence in the findings\n• **Sources**: Multiple references consulted\n\n## Summary\n\nDetailed results with actionable insights and recommendations.${fileAnalysis}`;
-        }
+        // Credits are charged only after the provider returns, so a failed
+        // run never costs the user.
+        const result = await complete({
+          query,
+          requestType,
+          context: fileAnalysis || undefined,
+        });
+
+        spend({
+          amount: creditsRequired,
+          request_type: requestTypeMap[requestType],
+          description: `${requestType.replace("_", " ")} request: ${query.substring(
+            0,
+            50
+          )}...`,
+        });
 
         const newResult: SearchResult = {
           id: `${Date.now()}-${resultCounter}`,
           query: query,
-          result: mockResult,
+          result,
           request_type: requestType,
           credits_used: creditsRequired,
           created_at: new Date().toISOString(),
@@ -739,7 +710,12 @@ export const SearchInterface: React.FC<SearchInterfaceProps> = ({
         );
       } catch (error) {
         console.error("Error processing request:", error);
-        toast.error("An error occurred while processing your request");
+        // Credits were not charged, so the raw provider reason is safe to show.
+        toast.error(
+          error instanceof LlmError
+            ? error.message
+            : "An error occurred while processing your request"
+        );
       } finally {
         setLoading(false);
       }
