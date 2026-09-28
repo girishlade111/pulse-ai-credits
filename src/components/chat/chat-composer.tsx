@@ -178,7 +178,7 @@ export const ChatComposer: React.FC<ChatComposerProps> = ({
               aria-label="Send message"
               className="h-9 w-9 shrink-0"
             >
-              <SendGlyph />
+              <Send />
             </Button>
           )}        </div>
       </div>
@@ -264,22 +264,4 @@ const Kbd: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   <kbd className="kbd">{children}</kbd>
 );
 
-/** Kept local so the composer owns its own glyph weight. */
-const SendGlyph: React.FC = () => (
-  <svg
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    className="h-4 w-4"
-    aria-hidden
-  >
-    <path d="M22 2 11 13" />
-    <path d="m22 2-7 20-4-9-9-4Z" />
-  </svg>
-);
-
-export { MinimalisticIcons };
 export default ChatComposer;
