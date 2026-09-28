@@ -258,11 +258,6 @@ const Plans: React.FC = () => {
   };
 
   const handlePlanUpgrade = async (plan: SubscriptionPlan) => {
-    if (!user) {
-      navigate("/auth");
-      return;
-    }
-
     if (plan.plan_type === "free") {
       toast.info("You are already on the free plan");
       return;
@@ -275,8 +270,14 @@ const Plans: React.FC = () => {
       toast.success(`Redirecting to payment for ${plan.name}`);
 
       setTimeout(() => {
+        setSubscription({
+          plan_type: plan.plan_type,
+          name: plan.name,
+          can_topup: plan.can_topup,
+          topup_discount: plan.topup_discount,
+        });
+        topup(plan.credits, `Plan upgrade: ${plan.name} (${plan.credits} credits)`);
         toast.success("Payment successful! Your plan has been upgraded.");
-        refreshUserData();
         setProcessingPlan(null);
       }, 2000);
     } catch (error) {
@@ -287,12 +288,7 @@ const Plans: React.FC = () => {
   };
 
   const handleTopup = async (pkg: TopupPackage) => {
-    if (!user) {
-      navigate("/auth");
-      return;
-    }
-
-    if (!subscription?.can_topup || subscription?.plan_type === "free") {
+    if (!subscription.can_topup || subscription.plan_type === "free") {
       toast.error(
         "Credit top-ups are only available for paid plans. Please upgrade to access top-ups."
       );
@@ -310,30 +306,14 @@ const Plans: React.FC = () => {
         `Processing top-up of ${pkg.credits} credits for ${formatPrice(discountedPrice)}`
       );
 
-      setTimeout(async () => {
-        if (credits) {
-          await supabase
-            .from("user_credits")
-            .update({
-              current_credits: credits.current_credits + pkg.credits,
-              total_earned_credits: credits.total_earned_credits + pkg.credits,
-            })
-            .eq("user_id", user.id);
-
-          await supabase.from("credit_transactions").insert({
-            user_id: user.id,
-            transaction_type: "topup",
-            credits_amount: pkg.credits,
-            description: `Credit top-up: ${pkg.credits} credits${
-              discount > 0 ? ` (${discount}% discount applied)` : ""
-            }`,
-          });
-
-          toast.success(
-            `Successfully added ${pkg.credits} credits to your account!`
-          );
-          refreshUserData();
-        }
+      setTimeout(() => {
+        topup(
+          pkg.credits,
+          `Credit top-up: ${pkg.credits} credits${
+            discount > 0 ? ` (${discount}% discount applied)` : ""
+          }`
+        );
+        toast.success(`Successfully added ${pkg.credits} credits!`);
       }, 1500);
     } catch (error) {
       console.error("Error processing top-up:", error);
