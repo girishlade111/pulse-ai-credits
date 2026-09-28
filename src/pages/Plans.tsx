@@ -614,7 +614,7 @@ const Plans: React.FC = () => {
                 <p className="body-md mt-3 text-muted">
                   {isFreePlan
                     ? "You are viewing top-ups in preview mode. Upgrade to a paid plan to purchase credits."
-                    : subscription?.topup_discount
+                    : subscription.topup_discount
                     ? `Your plan takes ${subscription.topup_discount}% off every top-up.`
                     : "Purchased at standard rates."}
                 </p>

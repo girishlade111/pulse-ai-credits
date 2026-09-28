@@ -15,9 +15,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { useAuth } from "@/contexts/AuthContext";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
 import { MinimalisticIcons } from "@/components/ui/minimalistic-icons";
 import { TimelinePill, type TimelineStage } from "@/components/TimelinePill";
 import { Wordmark } from "@/components/layout/Navbar";
@@ -34,7 +33,6 @@ import {
   Image as ImageIcon,
   LayoutDashboard,
   Loader2,
-  LogOut,
   Menu,
   MessageSquarePlus,
   Paperclip,
@@ -95,7 +93,7 @@ const MAX_FILE_SIZE = 10 * 1024 * 1024;
 export const SearchInterface: React.FC<SearchInterfaceProps> = ({
   onResultsChange,
 }) => {
-  const { user, credits, subscription, refreshUserData, signOut } = useAuth();
+  const { credits, subscription, spend } = useWorkspace();
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(false);
@@ -603,14 +601,9 @@ export const SearchInterface: React.FC<SearchInterfaceProps> = ({
         | "deep_research_8x"
         | "find_all"
     ) => {
-      if (!user) {
-        toast.error("Please sign in to use AI features");
-        return;
-      }
-
       // Premium feature gate
       const premiumFeatures = ["deep_research_8x", "find_all"];
-      if (premiumFeatures.includes(requestType) && subscription?.plan_type !== "business") {
+      if (premiumFeatures.includes(requestType) && subscription.plan_type !== "business") {
         toast.error(
           "8x Deep Research and Find All features are exclusive to Business plan users. Please upgrade to access these premium features."
         );
@@ -623,8 +616,8 @@ export const SearchInterface: React.FC<SearchInterfaceProps> = ({
       }
 
       const creditsRequired = creditCosts[requestType];
-      if (!credits || credits.current_credits < creditsRequired) {
-        if (!subscription || subscription.plan_type === "free") {
+      if (credits.current_credits < creditsRequired) {
+        if (subscription.plan_type === "free") {
           setShowUpgradeDialog(true);
         } else {
           setShowTopupDialog(true);
@@ -635,19 +628,7 @@ export const SearchInterface: React.FC<SearchInterfaceProps> = ({
       setLoading(true);
 
       try {
-        // Deduct credits
-        const { error: creditError } = await supabase
-          .from("user_credits")
-          .update({
-            current_credits: credits.current_credits - creditsRequired,
-            total_spent_credits: credits.total_spent_credits + creditsRequired,
-          })
-          .eq("user_id", user.id);
-
-        if (creditError) throw creditError;
-
-        // Record transaction
-        const dbRequestTypeMap: Record<
+        const requestTypeMap: Record<
           string,
           "normal_search" | "deep_research" | "image_generation"
         > = {
@@ -660,11 +641,10 @@ export const SearchInterface: React.FC<SearchInterfaceProps> = ({
           find_all: "normal_search",
         };
 
-        await supabase.from("credit_transactions").insert({
-          user_id: user.id,
-          transaction_type: "deduction",
-          request_type: dbRequestTypeMap[requestType],
-          credits_amount: creditsRequired,
+        // Deduct credits and record the run in the local ledger
+        spend({
+          amount: creditsRequired,
+          request_type: requestTypeMap[requestType],
           description: `${requestType.replace("_", " ")} request: ${query.substring(
             0,
             50
@@ -757,8 +737,6 @@ export const SearchInterface: React.FC<SearchInterfaceProps> = ({
             creditsRequired > 1 ? "s" : ""
           } used.`
         );
-
-        await refreshUserData();
       } catch (error) {
         console.error("Error processing request:", error);
         toast.error("An error occurred while processing your request");
@@ -766,7 +744,7 @@ export const SearchInterface: React.FC<SearchInterfaceProps> = ({
         setLoading(false);
       }
     },
-    [user, subscription, query, credits, selectedMode, resultCounter, refreshUserData, onResultsChange]
+    [subscription, query, credits, selectedMode, resultCounter, spend, onResultsChange]
   );
 
   const currentOption = searchOptions.find((option) => option.id === selectedMode);
@@ -855,7 +833,7 @@ export const SearchInterface: React.FC<SearchInterfaceProps> = ({
           <Button
             size="icon"
             onClick={() => handleSearch(selectedMode as SearchResult["request_type"])}
-            disabled={loading || !user || !query.trim()}
+            disabled={loading || !query.trim()}
             aria-label="Send"
             className="h-9 w-9 shrink-0"
           >
@@ -1134,14 +1112,11 @@ export const SearchInterface: React.FC<SearchInterfaceProps> = ({
         })}
         <button
           type="button"
-          onClick={async () => {
-            await signOut();
-            navigate("/");
-          }}
+          onClick={() => navigate("/")}
           className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm text-muted transition-colors hover:bg-card hover:text-ink"
         >
-          <LogOut className="h-4 w-4 shrink-0" />
-          Sign out
+          <Home className="h-4 w-4 shrink-0" />
+          Back to site
         </button>
       </div>
     </>

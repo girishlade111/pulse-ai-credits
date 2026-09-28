@@ -35,8 +35,11 @@ interface SpendInput {
 }
 
 interface WorkspaceContextType extends WorkspaceState {
-  /** Deducts credits and records the run. No-op when the balance is too low. */
-  spend: (input: SpendInput) => boolean;
+  /**
+   * Deducts credits and records the run. The updater re-checks the balance
+   * against the latest state, so a rapid second call cannot overdraw.
+   */
+  spend: (input: SpendInput) => void;
   /** Adds credits and records the top-up. */
   topup: (amount: number, description: string) => void;
   setSubscription: (subscription: Subscription) => void;
@@ -103,11 +106,8 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({
   }, [state]);
 
   const spend = useCallback(({ amount, request_type, description }: SpendInput) => {
-    let charged = false;
-
     setState((prev) => {
       if (prev.credits.current_credits < amount) return prev;
-      charged = true;
 
       return {
         ...prev,
@@ -127,8 +127,6 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({
         ].slice(0, MAX_TRANSACTIONS),
       };
     });
-
-    return charged;
   }, []);
 
   const topup = useCallback((amount: number, description: string) => {
