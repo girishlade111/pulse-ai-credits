@@ -349,7 +349,7 @@ const Features: React.FC = () => {
               <h2 className="display-lg mx-auto max-w-2xl text-balance">
                 Ten credits to start. Pick a tool and run it.
               </h2>
-              <Button className="mt-8" onClick={() => navigate("/auth")}>
+              <Button className="mt-8" onClick={() => navigate("/workspace")}>
                 Get started free
               </Button>
             </div>
