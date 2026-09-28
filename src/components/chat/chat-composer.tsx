@@ -88,6 +88,11 @@ export const ChatComposer: React.FC<ChatComposerProps> = ({
     if (autoFocusOnMount) textareaRef.current?.focus();
   }, [autoFocusOnMount]);
 
+  React.useEffect(() => {
+    if (focusToken === undefined) return;
+    textareaRef.current?.focus();
+  }, [focusToken]);
+
   const submit = () => {
     if (!canSend) return;
     onSubmit();

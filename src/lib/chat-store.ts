@@ -20,7 +20,7 @@ import {
 } from "./chat-types";
 
 const STORAGE_KEY = "pulseai-chat-sessions-v1";
-const ACTIVE_KEY = "pulseai-chat-active-v1";
+const VIEW_KEY = "pulseai-chat-view-v1";
 const PERSIST_DEBOUNCE_MS = 300;
 /** Keeps storage bounded without the user noticing. */
 const MAX_SESSIONS = 100;
@@ -51,6 +51,28 @@ const readStorage = (): PersistedShape => {
     return { sessions, activeId };
   } catch {
     return { sessions: [], activeId: null };
+  }
+};
+
+/**
+ * Whether the user left the workspace in the chat view. Reloading mid-chat
+ * should not dump them back on the marketing hero.
+ */
+export const readChatView = (): boolean => {
+  if (typeof window === "undefined") return false;
+  try {
+    return window.localStorage.getItem(VIEW_KEY) === "1";
+  } catch {
+    return false;
+  }
+};
+
+export const writeChatView = (inChat: boolean): void => {
+  try {
+    if (inChat) window.localStorage.setItem(VIEW_KEY, "1");
+    else window.localStorage.removeItem(VIEW_KEY);
+  } catch {
+    // Storage blocked — the flag is a nicety, not a requirement.
   }
 };
 
