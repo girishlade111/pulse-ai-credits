@@ -48,6 +48,7 @@ import {
   clampSidebarWidth,
   readChatView,
   readSidebarWidth,
+  SIDEBAR_DEFAULT,
   useChatSessions,
   writeChatView,
   writeSidebarWidth,
@@ -127,6 +128,21 @@ export const SearchInterface: React.FC<SearchInterfaceProps> = ({ onResultsChang
   const setChatMode = React.useCallback((next: boolean) => {
     writeChatView(next);
     setChatModeState(next);
+  }, []);
+
+  // Clamp on the way in and persist on the way out, so a drag can never leave
+  // the panel in a state the layout cannot recover from.
+  const handleSidebarWidth = React.useCallback((next: number) => {
+    setSidebarWidth(clampSidebarWidth(next));
+  }, []);
+
+  const persistSidebarWidth = React.useCallback((next: number) => {
+    writeSidebarWidth(next);
+  }, []);
+
+  const resetSidebarWidth = React.useCallback(() => {
+    setSidebarWidth(SIDEBAR_DEFAULT);
+    writeSidebarWidth(SIDEBAR_DEFAULT);
   }, []);
 
   const fileInputRef = React.useRef<HTMLInputElement>(null);
