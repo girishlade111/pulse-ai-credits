@@ -147,7 +147,10 @@ export const ChatTurn: React.FC<ChatTurnProps> = ({
           </ol>
 
           {failed ? (
-            <div className="bubble-agent border-destructive/40 bg-destructive/5">
+            <div
+              className="bubble-agent border-destructive/40 bg-destructive/5"
+              data-chat-status="error"
+            >
               <div className="flex items-start gap-3">
                 <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-destructive" />
                 <div className="min-w-0 flex-1">
@@ -166,7 +169,11 @@ export const ChatTurn: React.FC<ChatTurnProps> = ({
               </div>
             </div>
           ) : (
-            <div className="bubble-agent">
+            <div
+              className="bubble-agent"
+              data-chat-status={reply.status}
+              aria-busy={streaming || undefined}
+            >
               {reply.text ? (
                 <Markdown content={reply.text} className={cn(streaming && "md-streaming")} />
               ) : (
