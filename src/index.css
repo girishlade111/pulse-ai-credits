@@ -319,7 +319,7 @@
     @apply shrink-0 border-t border-hairline bg-canvas-soft;
   }
   .chat-sidebar {
-    @apply fixed left-0 top-0 z-50 flex h-full w-64 -translate-x-full flex-col border-r border-hairline bg-canvas-soft transition-transform duration-200 lg:translate-x-0;
+    @apply fixed left-0 top-0 z-50 flex h-full w-64 flex-col border-r border-hairline bg-canvas-soft transition-transform duration-200;
   }
   .chat-turn {
     @apply space-y-6;
