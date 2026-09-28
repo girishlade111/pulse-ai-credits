@@ -5,21 +5,20 @@ import { componentTagger } from "lovable-tagger";
 import type { IncomingMessage, ServerResponse } from "node:http";
 
 /**
- * Dev-server proxy for the LLM provider.
+ * Dev-server proxy for apinex, the OpenAI-compatible LLM provider.
  *
- * The provider is OpenAI-compatible. The API key and the model id are read here,
- * in the Node process, and attached to the upstream request. Neither is prefixed
- * with VITE_, so neither can reach the client bundle — the browser only ever
- * learns the same-origin path below.
+ * The API key and the model id are read here, in the Node process, and attached
+ * to the upstream request. Neither is prefixed with VITE_, so neither can reach
+ * the client bundle — the browser only ever learns the same-origin path below.
  *
  * When this app is deployed somewhere with a real server, replace this plugin
  * with an equivalent serverless function and point the client at that instead;
- * `src/lib/llm.ts` is the only file that needs to change.
+ * `src/lib/apinex.ts` is the only file that needs to change.
  */
-const LLM_PROXY_PREFIX = "/api/llm";
+const APINEX_PROXY_PREFIX = "/api/apinex";
 const UPSTREAM_TIMEOUT_MS = 120_000;
 
-interface LlmOptions {
+interface ApinexOptions {
   baseUrl: string;
   apiKey: string;
   model: string;
@@ -41,13 +40,13 @@ const sendJson = (res: ServerResponse, status: number, body: unknown) => {
   res.end(JSON.stringify(body));
 };
 
-const llmProxy = (options: LlmOptions): Plugin => ({
-  name: "pulse-llm-proxy",
+const apinexProxy = (options: ApinexOptions): Plugin => ({
+  name: "pulse-apinex-proxy",
   configureServer(server) {
-    server.middlewares.use(LLM_PROXY_PREFIX, async (req, res) => {
+    server.middlewares.use(APINEX_PROXY_PREFIX, async (req, res) => {
       // Only the completions route is exposed; this must not become an open proxy.
       if (!req.url?.startsWith("/chat/completions")) {
-        return sendJson(res, 404, { error: { message: "Unknown LLM route" } });
+        return sendJson(res, 404, { error: { message: "Unknown apinex route" } });
       }
 
       if (req.method !== "POST") {
@@ -56,7 +55,7 @@ const llmProxy = (options: LlmOptions): Plugin => ({
 
       if (!options.apiKey) {
         return sendJson(res, 500, {
-          error: { message: "LLM_API_KEY is not set. Add it to .env and restart the dev server." },
+          error: { message: "APINEX_API_KEY is not set. Add it to .env and restart the dev server." },
         });
       }
 
@@ -96,8 +95,8 @@ const llmProxy = (options: LlmOptions): Plugin => ({
         sendJson(res, aborted ? 504 : 502, {
           error: {
             message: aborted
-              ? `LLM request timed out after ${UPSTREAM_TIMEOUT_MS / 1000}s`
-              : `Could not reach the LLM provider: ${
+              ? `apinex request timed out after ${UPSTREAM_TIMEOUT_MS / 1000}s`
+              : `Could not reach apinex: ${
                   error instanceof Error ? error.message : "unknown error"
                 }`,
           },
@@ -121,10 +120,10 @@ export default defineConfig(({ mode }) => {
     plugins: [
       react(),
       mode === "development" && componentTagger(),
-      llmProxy({
-        baseUrl: (env.LLM_BASE_URL || "https://api.apinex.bond/v1").replace(/\/+$/, ""),
-        apiKey: env.LLM_API_KEY || "",
-        model: env.LLM_MODEL || "",
+      apinexProxy({
+        baseUrl: (env.APINEX_BASE_URL || "https://api.apinex.bond/v1").replace(/\/+$/, ""),
+        apiKey: env.APINEX_API_KEY || "",
+        model: env.APINEX_MODEL || "",
       }),
     ].filter(Boolean) as Plugin[],
     resolve: {
