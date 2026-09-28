@@ -162,6 +162,10 @@ const readSseDelta = (payload: unknown): string => {
 const NON_STREAM_HINT =
   "Could not reach the apinex proxy. If you are running a production build, it has no proxy — use `npm run dev`.";
 
+function throwEmpty(): never {
+  throw new ApinexError("apinex returned an empty response.");
+}
+
 /**
  * Runs one streaming completion.
  *
