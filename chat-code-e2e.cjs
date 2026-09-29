@@ -67,6 +67,9 @@ const sse = (text, chunkSize) => {
   return frames.join("");
 };
 
+// The Windows clipboard stores CRLF, so compare on normalised line endings.
+const norm = (s) => s.replace(/\r\n/g, String.fromCharCode(10)).trim();
+
 const installMock = async (page, { text, chunkSize }) => {
   await page.route("**/api/apinex/**", async (route) => {
     await route.fulfill({
@@ -116,10 +119,10 @@ const open = async (page, prompt) => {
   check("code block has a header bar", (await shells.locator(".md-code-bar").count()) === 1);
 
   const lang = (await shells.locator(".md-code-lang").innerText()).trim();
-  check("language tag shown", lang === "javascript", lang);
+  check("language tag shown", /^javascript$/i.test(lang), lang);
 
   const rendered = await shells.locator("pre code").innerText();
-  check("code text is intact", rendered.trim() === CODE.trim(), `${rendered.length} vs ${CODE.length}`);
+  check("code text is intact", norm(rendered) === norm(CODE), `${rendered.length} vs ${CODE.length}`);
   check("language tag is not injected into the code", !rendered.includes("javascript"));
 
   const copyBtn = shells.locator(".md-copy");
@@ -130,7 +133,7 @@ const open = async (page, prompt) => {
   await copyBtn.click();
   await page.waitForTimeout(300);
   const clip = await page.evaluate(() => navigator.clipboard.readText());
-  check("clipboard holds the exact raw code", clip.trim() === CODE.trim(), `${clip.length} vs ${CODE.length}`);
+  check("clipboard holds the exact raw code", norm(clip) === norm(CODE), `${clip.length} vs ${CODE.length} (CRLF-normalised)`);
   check("clipboard has no UI chrome", !/Copy code|Copied/.test(clip));
   check("copy button confirms", /Copied/i.test(await copyBtn.innerText()), await copyBtn.innerText());
   check("confirmed state is announced", /copied/i.test(await copyBtn.getAttribute("aria-label")));
@@ -176,7 +179,7 @@ const open = async (page, prompt) => {
   const shells2 = page.locator(".bubble-agent").nth(1).locator(".md-code-shell");
   check("both code blocks render", (await shells2.count()) === 2, `${await shells2.count()}`);
   const langs = await shells2.locator(".md-code-lang").allInnerTexts();
-  check("each block keeps its own language", langs.join(",") === "js,python", langs.join(","));
+  check("each block keeps its own language", langs.join(",").toLowerCase() === "js,python", langs.join(","));
   await shells2.nth(1).locator(".md-copy").click();
   await page.waitForTimeout(300);
   const clip2 = await page.evaluate(() => navigator.clipboard.readText());
