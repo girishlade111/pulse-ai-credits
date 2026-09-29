@@ -144,10 +144,13 @@ const readAsDataUrl = (file: File): Promise<string> =>
     reader.readAsDataURL(file);
   });
 
-export const fileToAttachment = async (file: File): Promise<ChatAttachment> => {
+export const fileToAttachment = async (
+  file: File,
+  id = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 9)}`
+): Promise<ChatAttachment> => {
   const type = file.type || "application/octet-stream";
   const attachment: ChatAttachment = {
-    id: `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 9)}`,
+    id,
     name: file.name,
     type,
     size: file.size,

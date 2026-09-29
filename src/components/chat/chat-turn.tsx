@@ -36,7 +36,14 @@ import {
 } from "lucide-react";
 
 interface AttachmentListProps {
-  attachments: { id: string; name: string; type: string; size: number; url?: string }[];
+  attachments: {
+    id: string;
+    name: string;
+    type: string;
+    size: number;
+    url?: string;
+    error?: string;
+  }[];
 }
 
 const AttachmentList: React.FC<AttachmentListProps> = ({ attachments }) => {
