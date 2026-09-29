@@ -158,9 +158,6 @@ const detectLanguage = (code: string): string => {
     return "python";
   }
   if (/^(SELECT|INSERT|UPDATE|DELETE|WITH|CREATE\s+TABLE|ALTER)\b/i.test(first)) return "sql";
-  if (/^(#!\/|\$ |npm |yarn |pnpm |git |docker |curl |cd |mkdir |chmod |apt |pip |export )/m.test(code)) {
-    return "bash";
-  }
   if (/^\s*[{[]/.test(first) && /^\s*[{[][\s\S]*[}\]]\s*$/.test(code.trim())) return "json";
 
   if (/^(const|let|var|function|class|async|export|import|require|interface)\b/.test(first)) {
@@ -170,6 +167,11 @@ const detectLanguage = (code: string): string => {
       code
     );
     return annotated ? "typescript" : "javascript";
+  }
+
+  // Deliberately excludes `export`, which is also JS module syntax.
+  if (/^(#!\/|\$ |npm |yarn |pnpm |git |docker |curl |cd |mkdir |chmod |apt |pip )/m.test(code)) {
+    return "bash";
   }
 
   return "text";
