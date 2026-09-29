@@ -8,13 +8,14 @@
  *
  * Two rules keep it honest:
  *
- *  - It is cosmetic only. The instant `streaming` goes false the reveal snaps
- *    to the full text, so what is on screen is always exactly what was stored
- *    and sent upstream. A reader can never be left looking at a truncated
- *    answer that the transcript already considers finished.
- *  - It never falls far behind. The rate scales with the backlog, so a fast
- *    producer cannot leave the reveal minutes behind, and a user can dismiss
- *    the effect with one click.
+ *  - It is cosmetic only. Once the reveal has drained, what is on screen is
+ *    exactly what was stored, so a reader is never left looking at a truncated
+ *    answer. When the stream is already finished on arrival, the reveal plays
+ *    the whole thing out rather than dumping it in one frame — that is the
+ *    common case for a gateway that buffers, and it is why an answer used to
+ *    appear with no sense of being written.
+ *  - It never falls far behind. The rate scales with the backlog, and a user
+ *    can dismiss the effect with one click.
  *
  * `prefers-reduced-motion` skips the effect entirely.
  */
@@ -30,6 +31,8 @@ const BASE_RATE = 0.55;
  * under a second behind instead of leaving a jump at the end of the reply.
  */
 const CATCHUP_MS = 500;
+/** A reply this long or longer plays out at full reading pace. */
+const MIN_REVEAL_MS = 400;
 
 const prefersReducedMotion = (): boolean =>
   typeof window !== "undefined" &&
@@ -52,52 +55,81 @@ export const revealStep = (backlog: number, elapsedMs: number): number => {
   return Math.max(1, Math.ceil(rate * elapsedMs));
 };
 
-export const useStreamReveal = (text: string, streaming: boolean): string => {
+export const useStreamReveal = (
+  text: string,
+  streaming: boolean
+): { revealed: string; done: boolean } => {
   const [revealed, setRevealed] = React.useState(text);
   /** Index into `text` currently painted. Kept in a ref: it changes per frame. */
   const cursor = React.useRef(0);
+  const [done, setDone] = React.useState(true);
 
-  // Finished (or never started): show everything, immediately.
+  // A shorter `text` means the store was rewritten (regenerate, session
+  // switch). Rewind rather than slicing past the end.
   React.useEffect(() => {
-    if (!streaming) {
-      cursor.current = text.length;
-      setRevealed(text);
+    if (cursor.current > text.length) cursor.current = 0;
+  }, [text]);
+
+  React.useEffect(() => {
+    if (!text) {
+      setDone(true);
+      return;
     }
-  }, [streaming, text]);
-
-  React.useEffect(() => {
-    if (!streaming || !text) return;
 
     if (prefersReducedMotion()) {
       cursor.current = text.length;
       setRevealed(text);
+      setDone(true);
       return;
     }
 
-    // A shorter `text` means the store was rewritten (regenerate, session
-    // switch). Rewind rather than slicing past the end.
-    if (cursor.current > text.length) {
-      cursor.current = 0;
+    /*
+     * Keep animating after the stream ends if there is still a backlog. A
+     * gateway that buffers delivers the whole answer in one go, and snapping on
+     * completion is exactly the "it appeared all at once" behaviour the write
+     * effect exists to remove. `data-done` then stays false until the reveal
+     * has actually drained, so the caret and the status agree.
+     */
+    if (!streaming && cursor.current >= text.length) {
+      setRevealed(text);
+      setDone(true);
+      return;
     }
+
+    setDone(cursor.current >= text.length);
+    if (cursor.current >= text.length) return;
 
     let frame = 0;
     let last = performance.now();
+
+    // Guarantee the reveal takes at least MIN_REVEAL_MS, even for a short
+    // answer, so every response visibly writes itself out.
+    const startedAt = last;
+    const total = text.length;
 
     const tick = (now: number) => {
       const elapsed = Math.min(120, now - last);
       last = now;
 
       const current = cursor.current;
-      if (current >= text.length) {
-        frame = 0; // Caught up. The effect re-runs when more text arrives.
+      if (current >= total) {
+        setRevealed(text);
+        setDone(true);
+        frame = 0;
         return;
       }
 
-      const backlog = text.length - current;
-      // Proportional catch-up on top of the reading-pace floor, so the reveal
-      // smooths bursts without ever drifting arbitrarily far behind.
-      const next = Math.min(text.length, current + revealStep(backlog, elapsed));
+      // Blend the catch-up term with a speed that finishes the whole reply
+      // within MIN_REVEAL_MS at the latest.
+      const elapsedTotal = now - startedAt;
+      const floorRate = Math.max(
+        BASE_RATE,
+        current / Math.max(1, MIN_REVEAL_MS - elapsedTotal)
+      );
+      const backlog = total - current;
+      const rate = Math.max(floorRate, BASE_RATE + backlog / CATCHUP_MS);
 
+      const next = Math.min(total, current + Math.max(1, Math.ceil(rate * elapsed)));
       cursor.current = next;
       setRevealed(text.slice(0, next));
       frame = requestAnimationFrame(tick);
@@ -109,7 +141,7 @@ export const useStreamReveal = (text: string, streaming: boolean): string => {
     };
   }, [streaming, text]);
 
-  return streaming ? revealed : text;
+  return { revealed, done };
 };
 
 export default useStreamReveal;
