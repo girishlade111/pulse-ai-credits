@@ -196,23 +196,9 @@ const CodeBlock: React.FC<{ language?: string; code: string }> = ({ language, co
   }, [copied]);
 
   const copy = React.useCallback(async () => {
-    try {
-      await navigator.clipboard.writeText(code);
-      setCopied(true);
-    } catch {
-      // Clipboard access can be denied; fall back to a temporary selection.
-      const scratch = document.createElement("textarea");
-      scratch.value = code;
-      scratch.setAttribute("readonly", "");
-      scratch.style.position = "fixed";
-      scratch.style.opacity = "0";
-      document.body.appendChild(scratch);
-      scratch.select();
-      const ok = document.execCommand?.("copy");
-      document.body.removeChild(scratch);
-      if (ok) setCopied(true);
-      else toast.error("Could not copy the code block.");
-    }
+    // Raw source, so nothing from the rendering leaks into the clipboard.
+    if (await copyText(code)) setCopied(true);
+    else toast.error("Could not copy the code block.");
   }, [code]);
 
   return (
