@@ -489,4 +489,4 @@ const readUsage = (payload: unknown): TokenUsage | undefined => {
  * not an exact count. The real figure is used whenever the provider sends one.
  */
 export const estimateTokens = (text: string): number =>
-  Math.max(1, Math.round(text.length / 4));
+  text.length === 0 ? 0 : Math.max(1, Math.round(text.length / 4));
