@@ -85,6 +85,10 @@ const send = async (turns) => {
 
 const roles = (list) => list.map((m) => m.role).join(",");
 const firstUser = (list) => String(list.find((m) => m.role === "user")?.content ?? "");
+const lastUser = (list) => {
+  const users = list.filter((m) => m.role === "user");
+  return String(users[users.length - 1]?.content ?? "");
+};
 
 (async () => {
   /* ------------------------------------------------- alternation is kept */
@@ -109,13 +113,18 @@ const firstUser = (list) => String(list.find((m) => m.role === "user")?.content 
   });
 
   /* ----------------------------------- a turn with empty reply is dropped */
+  // B produced no answer, so it is an orphan: C is merged onto it rather than
+  // being dropped, and no empty assistant turn is emitted.
   list = await send([answered("A?", "a"), answered("B?", ""), answered("C?", "c")]);
-  check("a turn with an empty reply contributes no assistant turn", roles(list) === "user,assistant,user,assistant,user", roles(list));
+  check("an empty reply emits no assistant turn", roles(list) === "user,assistant,user,assistant", roles(list));
+  check("the orphan keeps its own prompt", firstUser(list) === "A?", firstUser(list));
+  check("the next prompt is merged onto the orphan", lastUser(list).includes("B?") && lastUser(list).includes("C?"), lastUser(list).slice(0, 60));
+  check("the real reply is still paired with the merged prompt", list.at(-1).content === "c", String(list.at(-1).content));
 
   /* ---------------------------------------------- a trailing orphan alone */
   list = await send([answered("A?", "a"), user("unanswered?")]);
   check("a trailing orphan is still sent as a user turn", roles(list) === "user,assistant,user", roles(list));
-  check("the trailing orphan is intact", firstUser(list).includes("unanswered?"));
+  check("the trailing orphan is intact", lastUser(list) === "unanswered?", lastUser(list));
 
   /* -------------------------------------- empty prompts are not sent */
   list = await send([user(""), user("   "), answered("real?", "yes")]);
