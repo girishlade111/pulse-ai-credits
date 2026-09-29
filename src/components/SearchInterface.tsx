@@ -504,7 +504,8 @@ export const SearchInterface: React.FC<SearchInterfaceProps> = ({ onResultsChang
     abortRef.current?.abort();
     storeRef.current.createSession();
     setInput("");
-    revokeAttachments(attachmentsRef.current);
+    // Not revoked: the previous session is still in the history sidebar, and its
+    // image previews point at these same object URLs.
     setAttachments([]);
     setSidebarOpen(false);
     setChatMode(true);
