@@ -293,6 +293,25 @@ export const renderExport = (format: ExportFormat, turns: ExportTurn[]): string 
   }
 };
 
+/**
+ * Writes the file.
+ *
+ * A PDF is a byte format, and its cross-reference table stores byte offsets.
+ * `new Blob([string])` encodes as UTF-8, which turns any character above U+007F
+ * into two or three bytes and shifts every offset recorded after it — a file
+ * that opens in some readers and not others, and only for replies containing
+ * an accented letter or an em dash. So the body is first mapped to one byte per
+ * code unit (latin1), which is exactly what `winAnsi` already guarantees.
+ */
+const toBlob = (body: string, mime: string): Blob => {
+  if (mime.startsWith("application/pdf")) {
+    const bytes = new Uint8Array(body.length);
+    for (let i = 0; i < body.length; i += 1) bytes[i] = body.charCodeAt(i) & 0xff;
+    return new Blob([bytes], { type: mime });
+  }
+  return new Blob([body], { type: mime });
+};
+
 /** Renders and downloads the transcript. Returns false if the browser refused. */
 export const downloadExport = (format: ExportFormat, turns: ExportTurn[]): boolean => {
   const meta = EXPORT_FORMATS.find((entry) => entry.id === format) ?? EXPORT_FORMATS[0];
@@ -300,7 +319,7 @@ export const downloadExport = (format: ExportFormat, turns: ExportTurn[]): boole
   const name = `pulse-chat-${slug(turns[0]?.prompt.text ?? "")}.${meta.extension}`;
 
   try {
-    const blob = new Blob([body], { type: meta.mime });
+    const blob = toBlob(body, meta.mime);
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement("a");
     anchor.href = url;
