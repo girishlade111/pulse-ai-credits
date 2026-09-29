@@ -12,6 +12,8 @@
  */
 
 import React from "react";
+import { toast } from "sonner";
+import { Check, Copy } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const SAFE_PROTOCOL = /^(https?:|mailto:)/i;
@@ -98,6 +100,75 @@ const HEADING_CLASS: Record<number, string> = {
 
 const FENCE = /^\s*```\s*([\w+-]*)\s*$/;
 
+/**
+ * A fenced block with its own copy control.
+ *
+ * Copying from inside a `<pre>` means dragging a text selection across a
+ * horizontally scrolling block, which nobody enjoys — so every block carries a
+ * button that copies the *raw* source. The raw text is what this component was
+ * handed at parse time, so what lands on the clipboard is exactly the code,
+ * with no rendering artefacts.
+ */
+const CodeBlock: React.FC<{ language?: string; code: string }> = ({ language, code }) => {
+  const [copied, setCopied] = React.useState(false);
+
+  React.useEffect(() => {
+    if (!copied) return;
+    const timer = setTimeout(() => setCopied(false), 2000);
+    return () => clearTimeout(timer);
+  }, [copied]);
+
+  const copy = React.useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(code);
+      setCopied(true);
+    } catch {
+      // Clipboard access can be denied; fall back to a temporary selection.
+      const scratch = document.createElement("textarea");
+      scratch.value = code;
+      scratch.setAttribute("readonly", "");
+      scratch.style.position = "fixed";
+      scratch.style.opacity = "0";
+      document.body.appendChild(scratch);
+      scratch.select();
+      const ok = document.execCommand?.("copy");
+      document.body.removeChild(scratch);
+      if (ok) setCopied(true);
+      else toast.error("Could not copy the code block.");
+    }
+  }, [code]);
+
+  return (
+    <figure className="md-code-shell">
+      <figcaption className="md-code-bar">
+        <span className="md-code-lang">{language || "code"}</span>
+        <button
+          type="button"
+          onClick={copy}
+          className="md-copy"
+          aria-label={copied ? "Code copied to clipboard" : "Copy code block"}
+          title={copied ? "Copied" : "Copy code"}
+        >
+          {copied ? (
+            <>
+              <Check aria-hidden />
+              Copied
+            </>
+          ) : (
+            <>
+              <Copy aria-hidden />
+              Copy
+            </>
+          )}
+        </button>
+      </figcaption>
+      <pre className="md-pre">
+        <code className="md-code md-code-block">{code}</code>
+      </pre>
+    </figure>
+  );
+};
+
 const renderBlocks = (source: string): React.ReactNode[] => {
   const lines = source.replace(/\r\n/g, "\n").split("\n");
   const out: React.ReactNode[] = [];
@@ -134,10 +205,11 @@ const renderBlocks = (source: string): React.ReactNode[] => {
       }
       i += 1; // closing fence (or EOF)
       out.push(
-        <pre key={`code-${key++}`} className="md-pre">
-          {lang ? <span className="md-code-lang">{lang}</span> : null}
-          <code className="md-code md-code-block">{body.join("\n")}</code>
-        </pre>
+        <CodeBlock
+          key={`code-${key++}`}
+          language={lang || undefined}
+          code={body.join("\n")}
+        />
       );
       continue;
     }
