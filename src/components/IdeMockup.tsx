@@ -199,7 +199,7 @@ const CODE_LINES: { tokens: React.ReactNode; gutter?: string }[] = [
     tokens: (
       <>
         <span className="text-muted-soft">18</span>{" "}
-        <span className="text-ink">creditsUsed</span>
+        <span className="text-ink">stages</span>
         <span className="text-muted-soft">:</span>
       </>
     ),
@@ -211,7 +211,7 @@ const CODE_LINES: { tokens: React.ReactNode; gutter?: string }[] = [
         <span className="text-muted-soft">19</span>{" "}
         <span className="text-ink">report</span>
         <span className="text-muted-soft">.</span>
-        <span className="text-ink">credits</span>
+        <span className="text-ink">stages</span>
         <span className="text-muted-soft">,</span>
       </>
     ),
