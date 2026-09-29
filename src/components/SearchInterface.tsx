@@ -596,6 +596,23 @@ export const SearchInterface: React.FC<SearchInterfaceProps> = ({ onResultsChang
     />
   );
 
+  return (
+    <>
+      {/*
+        The composer lives in the same React position in both branches — only
+        the wrapper classes change. That is deliberate: switching between the
+        landing view and the chat must not unmount the textarea, or the reply
+        lands while the caret is gone.
+      */}
+      <div
+        className={cn(chatMode ? "flex h-full min-h-0 flex-col" : "block w-full")}
+        /*
+         * One source of truth for the panel width. CSS custom properties
+         * inherit down the tree, so the sidebar and the main column both read
+         * this single value and cannot drift out of sync mid-drag.
+         */
+        style={{ "--chat-sidebar-width": `${sidebarWidth}px` } as React.CSSProperties}
+      >
         {chatMode && (
           <ChatSidebar
             store={store}
