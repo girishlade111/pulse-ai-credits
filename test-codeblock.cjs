@@ -124,7 +124,10 @@ const SNAP = [
   const reply = page.locator(".bubble-agent").first();
   await reply.waitFor({ state: "visible", timeout: 30000 });
   await page.waitForFunction(
-    () => document.querySelector(".bubble-agent")?.dataset.chatStatus === "complete",
+    () => {
+      const el = document.querySelector(".bubble-agent");
+      return el && el.dataset.chatStatus === "complete" && !el.querySelector("[data-revealing]");
+    },
     null,
     { timeout: 30000 }
   );
