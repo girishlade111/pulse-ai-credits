@@ -82,7 +82,7 @@ export const useStreamReveal = (
       return;
     }
 
-    if (prefersReducedMotion()) {
+    if (prefersReducedMotion() || text.length < MIN_ANIMATED_CHARS) {
       cursor.current = text.length;
       setRevealed(text);
       setDone(true);
