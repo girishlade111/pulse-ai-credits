@@ -175,7 +175,7 @@ export const ChatTurn: React.FC<ChatTurnProps> = ({
               aria-busy={streaming || undefined}
             >
               {reply.text ? (
-                <Markdown content={reply.text} className={cn(streaming && "md-streaming")} />
+                <ReplyBody text={reply.text} streaming={streaming} />
               ) : (
                 <ThinkingSkeleton mode={reply.requestType} />
               )}
@@ -244,6 +244,41 @@ export const ChatTurn: React.FC<ChatTurnProps> = ({
         </div>
       )}
     </article>
+  );
+};
+
+/**
+ * The reply body.
+ *
+ * Isolated from the rest of the turn on purpose: the write-stream repaints on
+ * every animation frame, and if that state lived in `ChatTurn` the avatar,
+ * timeline pills and action toolbar would all reconcile 60 times a second.
+ * Only this subtree re-renders.
+ */
+const ReplyBody: React.FC<{ text: string; streaming: boolean }> = ({ text, streaming }) => {
+  const revealed = useStreamReveal(text, streaming);
+  const [dismissed, setDismissed] = React.useState(false);
+
+  // A new run resets the "skip" affordance.
+  React.useEffect(() => setDismissed(false), [text]);
+
+  const shown = dismissed ? text : revealed;
+  const lagging = streaming && shown.length < text.length;
+
+  return (
+    <>
+      <Markdown content={shown} className={cn(streaming && "md-streaming")} />
+      {lagging && (
+        <button
+          type="button"
+          onClick={() => setDismissed(true)}
+          className="md-skip"
+        >
+          <ChevronsDown aria-hidden />
+          Show the rest
+        </button>
+      )}
+    </>
   );
 };
 
