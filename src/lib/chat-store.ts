@@ -166,6 +166,8 @@ export interface ChatStore {
   grouped: { group: SessionGroup; sessions: ChatSession[] }[];
   activeId: string | null;
   active: ChatSession | null;
+  /** False until IndexedDB has answered; an empty list before then is not "no chats". */
+  ready: boolean;
   createSession: () => string;
   selectSession: (id: string | null) => void;
   deleteSession: (id: string) => void;
@@ -183,27 +185,67 @@ export interface ChatStore {
 }
 
 export const useChatSessions = (): ChatStore => {
-  const [state, setState] = useState<PersistedShape>(readStorage);
+  const [state, setState] = useState<PersistedShape>(EMPTY);
+  const [ready, setReady] = useState(false);
   const writeTimer = useRef<ReturnType<typeof setTimeout>>();
+  const hydrated = useRef(false);
+
+  /*
+   * Hydrate once. IndexedDB is asynchronous, so the first render has no
+   * history; `ready` tells consumers to wait rather than flash an empty state.
+   * A `localStorage` history from the previous version is imported on the way
+   * in, so upgrading does not appear to delete every chat.
+   */
+  useEffect(() => {
+    if (hydrated.current) return;
+    hydrated.current = true;
+    let cancelled = false;
+
+    void (async () => {
+      let sessions = (await loadSessions()).filter(isSession);
+
+      if (!sessions.length) {
+        const legacy = readLegacy();
+        if (legacy.sessions.length) {
+          sessions = legacy.sessions;
+          await saveSessions(sessions);
+          try {
+            window.localStorage.removeItem(LEGACY_KEY);
+          } catch {
+            // The copy is already in IndexedDB; leaving the old key is harmless.
+          }
+        }
+      }
+
+      const storedActiveId = await loadMeta(ACTIVE_SESSION_KEY);
+      const activeId =
+        typeof storedActiveId === "string" && sessions.some((s) => s.id === storedActiveId)
+          ? storedActiveId
+          : legacy.activeId;
+
+      if (cancelled) return;
+      setState({ sessions, activeId: activeId ?? null });
+      setReady(true);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // Debounced persistence. `sessions` identity changes on every streamed chunk.
   useEffect(() => {
+    if (!ready) return;
     if (writeTimer.current) clearTimeout(writeTimer.current);
     writeTimer.current = setTimeout(() => {
-      try {
-        window.localStorage.setItem(
-          STORAGE_KEY,
-          JSON.stringify({ sessions: state.sessions, activeId: state.activeId })
-        );
-      } catch {
-        // Storage full or blocked — the in-memory chat still works.
-      }
+      void saveSessions(state.sessions);
+      void saveMeta(ACTIVE_SESSION_KEY, state.activeId);
     }, PERSIST_DEBOUNCE_MS);
 
     return () => {
       if (writeTimer.current) clearTimeout(writeTimer.current);
     };
-  }, [state]);
+  }, [ready, state]);
 
   const mutate = useCallback(
     (sessionId: string, updater: (session: ChatSession) => ChatSession) => {
