@@ -92,14 +92,16 @@ const users = (convo) => convo.filter((m) => m.role === "user").map((m) => m.con
 
   /* ============ 1. the reported bug: fail, then ask again ============ */
   await fresh();
+  // 500, not 429: a 429 is retried by design, which would consume the next
+  // scripted answer and make the indices below meaningless.
   const sent = await installScript(page, [
-    { fail: "Rate limit exceeded", status: 429 },
+    { fail: "upstream exploded", status: 500 },
     { text: "Tokyo is the capital of Japan." },
   ]);
 
   const r1 = await ask("What is the capital of France?");
   check("turn 1 fails as scripted", r1.status === "error", r1.status);
-  check("failed turn is reported honestly", /rate limit/i.test(r1.text), r1.text.slice(0, 60));
+  check("failed turn is reported honestly", /upstream exploded/i.test(r1.text), r1.text.slice(0, 60));
 
   const r2 = await ask("What is the capital of Japan?");
   check("turn 2 succeeds", r2.status === "complete", r2.status);
@@ -154,19 +156,29 @@ const users = (convo) => convo.filter((m) => m.role === "user").map((m) => m.con
     sent2.map(roles).join(" | ")
   );
 
-  /* ============ 3. a stopped turn does not orphan the next one ============ */
+  /* ============ 3. a retried turn does not duplicate the thread ============ */
   await fresh();
-  const sent3 = await installScript(page, [{ text: "x".repeat(3000) }, { text: "Second answer." }]);
-  const c3 = page.locator("textarea[aria-label='Message Pulse agent']");
-  await c3.fill("Write something long.");
-  await c3.press("Enter");
-  await page.waitForSelector(".bubble-agent", { timeout: 30000 });
-  await page.waitForTimeout(700);
-  await page.getByRole("button", { name: "Stop generating" }).click();
-  await page.waitForTimeout(800);
-  await ask("Follow-up question.");
-  check("follow-up after a stop has no double-user payload", !/user,user/.test(roles(sent3[1])), roles(sent3[1]));
-  check("follow-up payload is well formed", roles(sent3[1]).endsWith("user"), roles(sent3[1]));
+  const sent3 = await installScript(page, [
+    { fail: "transient", status: 500 },
+    { fail: "transient", status: 500 },
+    { text: "Answer after the failures." },
+  ]);
+  // Turn 1 fails, so turn 2 must carry the orphaned prompt forward.
+  await ask("First question.");
+  await ask("Second question.");
+  check("two prompts, two requests", sent3.length === 2, `${sent3.length}`);
+  check(
+    "the follow-up has no double-user payload",
+    !/user,user/.test(roles(sent3[1])),
+    roles(sent3[1])
+  );
+  check(
+    "the follow-up merges both prompts into one user turn",
+    (users(sent3[1])[0] || "").includes("First question.") &&
+      (users(sent3[1])[0] || "").includes("Second question."),
+    JSON.stringify((users(sent3[1])[0] || "").slice(0, 80))
+  );
+  check("the follow-up payload ends on a user turn", roles(sent3[1]).endsWith("user"), roles(sent3[1]));
 
   /* ============ 4. retry on a throttle ============ */
   await fresh();
