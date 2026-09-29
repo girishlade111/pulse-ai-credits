@@ -11,8 +11,8 @@ import { TimelinePill, type TimelineStage } from "./TimelinePill";
 
 const FILE_TREE = [
   { name: "pulse", depth: 0, kind: "dir" },
-  { name: "credits.ts", depth: 1, kind: "file", active: true },
-  { name: "research.ts", depth: 1, kind: "file" },
+  { name: "research.ts", depth: 1, kind: "file", active: true },
+  { name: "transcript.ts", depth: 1, kind: "file" },
   { name: "search.ts", depth: 1, kind: "file" },
   { name: "agent", depth: 0, kind: "dir" },
   { name: "timeline.ts", depth: 1, kind: "file" },
