@@ -53,6 +53,8 @@ const sse = (text, chunk) => {
       const snap = await reply.evaluate((el) => ({
         painted: (el.querySelector(".md")?.textContent || "").length,
         status: el.dataset.chatStatus,
+        caret: el.querySelectorAll(".md-streaming").length,
+        skipped: (el.textContent || "").includes("Show the rest"),
       }));
       trace.push(snap);
       if (snap.status === "complete" && snap.painted >= text.length) break;
@@ -60,13 +62,13 @@ const sse = (text, chunk) => {
     }
 
     const distinct = new Set(trace.map((t) => t.painted));
-    const grew = trace.some((t) => t.status === "streaming" && t.painted < text.length);
+    const grew = trace.some((t) => t.painted < text.trim().length);
     check(`${label}: reply paints progressively`, distinct.size >= 8, `${distinct.size} distinct lengths`);
-    check(`${label}: the reveal lags the text at some point`, grew);
+    check(`${label}: the reveal lags the text at some point`, grew, `${trace.length} samples`);
     check(
       `${label}: ends at the full text`,
-      trace[trace.length - 1].painted === text.length,
-      `${trace[trace.length - 1].painted} vs ${text.length}`
+      trace[trace.length - 1].painted === text.trim().length,
+      `${trace[trace.length - 1].painted} vs ${text.trim().length}`
     );
     check(
       `${label}: painted length only grows`,
@@ -74,8 +76,13 @@ const sse = (text, chunk) => {
     );
     check(
       `${label}: caret is shown while writing`,
-      trace.some((t) => t.status === "streaming"),
-      `${trace.filter((t) => t.status === "streaming").length} streaming samples`
+      trace.some((t) => t.caret > 0),
+      `${trace.filter((t) => t.caret > 0).length} frames with a caret`
+    );
+    check(
+      `${label}: a "show the rest" escape hatch appears`,
+      trace.some((t) => t.skipped),
+      ""
     );
     const finalCaret = await reply.locator(".md-streaming").count();
     check(`${label}: caret removed when finished`, finalCaret === 0, `${finalCaret}`);
@@ -107,8 +114,8 @@ const sse = (text, chunk) => {
     if ((await short.getAttribute("data-chat-status")) === "complete") break;
     await page.waitForTimeout(12);
   }
-  check("a one-word reply still animates", shortDistinct.size >= 2, `${shortDistinct.size} lengths: ${[...shortDistinct].join(",")}`);
-  check("a one-word reply finishes complete", (await short.innerText()).includes("Paris"));
+  check("a very short reply is not animated (avoids a flicker)", shortDistinct.size === 1 && shortDistinct.has(6), `${shortDistinct.size} lengths: ${[...shortDistinct].join(",")}`);
+  check("a very short reply still shows in full", (await short.innerText()).includes("Paris"));
 
   // Reduced motion: no animation, straight to the full text.
   const rm = await browser.newPage({ viewport: { width: 1440, height: 1000 }, reducedMotion: "reduce" });
@@ -127,7 +134,7 @@ const sse = (text, chunk) => {
     .locator(".bubble-agent")
     .first()
     .evaluate((el) => (el.querySelector(".md")?.textContent || "").length);
-  check("reduced motion paints the full text at once", rmPainted === LONG.length, `${rmPainted} vs ${LONG.length}`);
+  check("reduced motion paints the full text at once", rmPainted === LONG.trim().length, `${rmPainted} vs ${LONG.trim().length}`);
   await rm.close();
 
   check("no page errors", errors.length === 0, errors.slice(0, 2).join(" | "));
