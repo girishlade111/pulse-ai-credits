@@ -23,8 +23,13 @@ import * as React from "react";
 
 /** Characters revealed per millisecond at a comfortable reading pace. */
 const BASE_RATE = 0.55;
-/** Past this backlog the rate scales up, so the reveal stays "live". */
-const MAX_BACKLOG = 300;
+/**
+ * How fast the reveal is allowed to catch up on a backlog. A burst is smoothed
+ * over roughly this long, and the equilibrium lag for a producer running at
+ * `p` chars/ms is `CATCHUP_MS * (p - BASE_RATE)` — so a fast gateway stays
+ * under a second behind instead of leaving a jump at the end of the reply.
+ */
+const CATCHUP_MS = 500;
 
 const prefersReducedMotion = (): boolean =>
   typeof window !== "undefined" &&
@@ -73,7 +78,9 @@ export const useStreamReveal = (text: string, streaming: boolean): string => {
       }
 
       const backlog = text.length - current;
-      const rate = backlog > MAX_BACKLOG ? backlog / MAX_BACKLOG : BASE_RATE;
+      // Proportional catch-up on top of the reading-pace floor, so the reveal
+      // smooths bursts without ever drifting arbitrarily far behind.
+      const rate = BASE_RATE + backlog / CATCHUP_MS;
       const step = Math.max(1, Math.ceil(rate * elapsed));
       const next = Math.min(text.length, current + step);
 
