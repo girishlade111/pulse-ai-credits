@@ -14,7 +14,7 @@
  */
 
 import type { ChatAttachment } from "./chat-types";
-import type { LlmContentPart } from "./llm";
+import type { LlmContent, LlmContentPart } from "./llm";
 
 export const MAX_FILES = 5;
 export const MAX_FILE_SIZE = 10 * 1024 * 1024;
@@ -74,25 +74,104 @@ const looksLikeText = (file: File): boolean =>
   ALLOWED_EXTENSION.test(file.name) ||
   CODE_EXTENSIONS.test(file.name);
 
-export const fileToAttachment = async (file: File): Promise<ChatAttachment> => {
-  const type = file.type || "application/octet-stream";
-  let content: string | undefined;
-  if (!isImage(type) && file.type !== "application/pdf" && looksLikeText(file)) {
-    try {
-      content = await file.text();
-    } catch {
-      content = undefined;
-    }
+/* ------------------------------------------------------------------- pdf.js */
+
+let pdfjsLoader: Promise<typeof import("pdfjs-dist")> | null = null;
+
+/**
+ * Lazily loads pdf.js from a CDN. The dynamic import keeps the ~350KB parser
+ * out of the main bundle, and it is never fetched unless a PDF is attached.
+ *
+ * If the CDN is unreachable the send still goes ahead — the model is told the
+ * PDF could not be read rather than the attachment silently disappearing.
+ */
+const loadPdfJs = () => {
+  pdfjsLoader ??= import(/* @vite-ignore */ PDF_JS_URL) as unknown as Promise<
+    typeof import("pdfjs-dist")
+  >;
+  return pdfjsLoader;
+};
+
+/** Pulls the words out of a PDF, page by page. Throws if it cannot be read. */
+export const extractPdfText = async (data: ArrayBuffer): Promise<string> => {
+  const pdfjs = await loadPdfJs();
+  pdfjs.GlobalWorkerOptions.workerSrc = PDF_WORKER_URL;
+
+  const doc = await pdfjs.getDocument({ data: new Uint8Array(data) }).promise;
+  const pages: string[] = [];
+  const limit = Math.min(doc.numPages, PDF_MAX_PAGES);
+
+  for (let page = 1; page <= limit; page += 1) {
+    const content = await (await doc.getPage(page)).getTextContent();
+    // pdf.js emits positioned fragments, not lines, so rejoin and re-space them.
+    const line = content.items
+      .map((item) => ("str" in item ? item.str : ""))
+      .join(" ")
+      .replace(/[ \t]+/g, " ")
+      .trim();
+    if (line) pages.push(`--- page ${page} ---\n${line}`);
   }
 
-  return {
+  if (doc.numPages > limit) {
+    pages.push(`[${doc.numPages - limit} further pages omitted]`);
+  }
+
+  await doc.destroy();
+  return pages.join("\n\n");
+};
+
+const readAsDataUrl = (file: File): Promise<string> =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(reader.error ?? new Error("read failed"));
+    reader.readAsDataURL(file);
+  });
+
+export const fileToAttachment = async (file: File): Promise<ChatAttachment> => {
+  const type = file.type || "application/octet-stream";
+  const attachment: ChatAttachment = {
     id: `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 9)}`,
     name: file.name,
     type,
     size: file.size,
-    content,
     url: isImage(type) ? URL.createObjectURL(file) : undefined,
   };
+
+  if (isImage(type)) {
+    // Images are sent as vision parts, not described in prose. The data URI is
+    // held on the attachment for the send and deliberately not persisted.
+    try {
+      attachment.dataUrl = await readAsDataUrl(file);
+    } catch {
+      attachment.error = "Could not read the image.";
+    }
+    return attachment;
+  }
+
+  if (isPdf(type, file.name)) {
+    try {
+      attachment.content = await extractPdfText(await file.arrayBuffer());
+    } catch {
+      attachment.error = "This PDF could not be read in the browser.";
+    }
+    return attachment;
+  }
+
+  if (RICH_DOC.test(file.name)) {
+    attachment.error = "Office documents cannot be parsed in the browser yet.";
+    return attachment;
+  }
+
+  if (looksLikeText(file)) {
+    try {
+      attachment.content = await file.text();
+    } catch {
+      attachment.error = "Could not read the file.";
+    }
+  }
+
+  return attachment;
 };
 
 export const revokeAttachments = (attachments: ChatAttachment[]): void => {
@@ -129,44 +208,59 @@ export const fileTypeLabel = (file: ChatAttachment): string => {
 };
 
 /**
- * Turns attachments into a block appended to the prompt. Returns an empty
- * string when there is nothing to say, so the caller can omit the context
- * entirely rather than sending a dangling header.
+ * Builds the content that goes on the wire for a prompt with attachments.
+ *
+ * Images become real `image_url` parts so the model can see them; text and
+ * extracted PDF text become a fenced block. A file the browser could not read
+ * is named explicitly, because silently dropping it would let the model answer
+ * from an attachment the user believes it was given.
  */
-export const buildAttachmentContext = (attachments: ChatAttachment[]): string => {
-  if (!attachments.length) return "";
+export const buildAttachmentContent = (
+  prompt: string,
+  attachments: ChatAttachment[]
+): LlmContent => {
+  if (!attachments.length) return prompt;
 
+  const parts: LlmContentPart[] = [{ type: "text", text: prompt }];
+  const readables: string[] = [];
+  const unreadable: string[] = [];
   let budget = MAX_TOTAL_CONTEXT_CHARS;
-  const sections: string[] = [];
 
   for (const attachment of attachments) {
-    const header = `### ${attachment.name} (${fileTypeLabel(attachment)}, ${formatFileSize(attachment.size)})`;
-    const lines: string[] = [header];
+    const label = `${attachment.name} (${fileTypeLabel(attachment)}, ${formatFileSize(attachment.size)})`;
 
     if (isImage(attachment.type)) {
-      lines.push(
-        "The user attached an image. Describe it if it is relevant, otherwise say so plainly."
-      );
-    } else if (attachment.type.includes("pdf")) {
-      lines.push(
-        "PDF attachment. Text extraction was not performed locally, so state that you cannot read the file contents instead of guessing."
-      );
-    } else if (attachment.content) {
-      const snippet = attachment.content.slice(0, Math.min(MAX_CONTENT_CHARS, budget));
-      budget -= snippet.length;
-      lines.push("```", snippet, "```");
-    } else {
-      lines.push("Attachment contents were not readable in the browser.");
+      if (attachment.dataUrl) {
+        parts.push({ type: "image_url", image_url: { url: attachment.dataUrl } });
+        readables.push(`- ${label} — attached above as an image; look at it directly.`);
+      } else {
+        unreadable.push(`- ${label} — the image could not be read.`);
+      }
+      continue;
     }
 
-    sections.push(lines.join("\n"));
-    if (budget <= 0) break;
+    if (attachment.content?.trim()) {
+      const snippet = attachment.content.slice(0, Math.min(MAX_CONTENT_CHARS, budget));
+      budget -= snippet.length;
+      readables.push(`- ${label}`, "", "```text", snippet, "```", "");
+    } else {
+      unreadable.push(`- ${label} — ${attachment.error ?? "contents unreadable"}.`);
+    }
   }
 
-  return [
-    "",
-    "## Attached files",
-    "The user attached the following. Use them when they are relevant, and say when they are not.",
-    ...sections,
-  ].join("\n");
+  const notes: string[] = [];
+  if (readables.length) {
+    notes.push("The user attached these files. Their contents are below.", ...readables);
+  }
+  if (unreadable.length) {
+    notes.push(
+      "These attachments could NOT be read. Say so plainly if they matter, and never guess their contents.",
+      ...unreadable
+    );
+  }
+  if (notes.length) {
+    parts.unshift({ type: "text", text: `${prompt}\n\n## Attachments\n${notes.join("\n")}` });
+  }
+
+  return parts.length === 1 ? prompt : parts;
 };

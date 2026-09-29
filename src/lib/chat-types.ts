@@ -26,10 +26,19 @@ export interface ChatAttachment {
   name: string;
   type: string;
   size: number;
-  /** Extracted text for text-like files; used to build the model context. */
+  /** Extracted text for text files and for a parsed PDF. */
   content?: string;
   /** Object URL for image previews. Revoked when the turn is cleared. */
   url?: string;
+  /**
+   * Base64 data URI for an image, sent to the model as a vision part.
+   * Deliberately not persisted: a few screenshots would blow the storage quota.
+   */
+  dataUrl?: string;
+  /** Set when the browser could not read the file, so the UI can say why. */
+  error?: string;
+  /** True once a PDF has been parsed, so the composer can show a spinner. */
+  reading?: boolean;
 }
 
 export interface ChatMessage {
