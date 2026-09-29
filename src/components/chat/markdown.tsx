@@ -376,10 +376,21 @@ const renderBlocks = (source: string): React.ReactNode[] => {
 interface MarkdownProps {
   content: string;
   className?: string;
+  /** Forwarded to the wrapper, e.g. `data-revealing` while text is still writing. */
+  "data-revealing"?: string;
 }
 
-export const Markdown: React.FC<MarkdownProps> = ({ content, className }) => (
-  <div className={cn("md", className)}>{renderBlocks(content)}</div>
+export const Markdown: React.FC<MarkdownProps> = ({
+  content,
+  className,
+  "data-revealing": revealing,
+}) => (
+  <div
+    className={cn("md", className)}
+    {...(revealing ? { "data-revealing": revealing } : {})}
+  >
+    {renderBlocks(content)}
+  </div>
 );
 
 export default Markdown;
