@@ -79,8 +79,15 @@ const REPLY = [
   const browser = await chromium.launch({ executablePath: process.env.CHROME_BIN });
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
   const errors = [];
+  const failedRequests = [];
   page.on("pageerror", (e) => errors.push(e.message));
   page.on("console", (m) => m.type() === "error" && errors.push(m.text()));
+  page.on("requestfailed", (r) =>
+    failedRequests.push(`${r.failure()?.errorText} ${r.url().slice(0, 110)}`)
+  );
+  page.on("response", (r) => {
+    if (r.status() >= 400) failedRequests.push(`HTTP ${r.status()} ${r.url().slice(0, 110)}`);
+  });
 
   const sent = [];
   await page.route("**/api/llm/**", (route) => {
