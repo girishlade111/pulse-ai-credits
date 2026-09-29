@@ -29,7 +29,7 @@ export const ACTIVE_SESSION_KEY = "activeSessionId";
 
 let dbPromise: Promise<IDBDatabase | null> | null = null;
 const memory = new Map<string, ChatSession>();
-let memoryMeta: Record<string, unknown> = {};
+const memoryMeta = new Map<string, unknown>();
 let usingMemory = false;
 
 const isSupported = (): boolean =>
@@ -181,12 +181,13 @@ export const clearStoredSessions = async (): Promise<void> => {
 
 export const loadMeta = async (key: string): Promise<unknown> => {
   const value = await run<unknown>(META, "readonly", (store) => store.get(key));
-  if (value === undefined) return usingMemory ? memoryMeta[key] : undefined;
+  if (value === undefined) return usingMemory ? memoryMeta.get(key) : undefined;
   return value;
 };
 
 export const saveMeta = async (key: string, value: unknown): Promise<void> => {
-  memoryMeta[key] = value;
+  // Mirrored in memory too, so a write that raced a close still resolves.
+  memoryMeta.set(key, value);
   await run(META, "readwrite", (store) => store.put(value, key) as IDBRequest<IDBValidKey>);
 };
 
