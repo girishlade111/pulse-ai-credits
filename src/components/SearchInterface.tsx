@@ -499,11 +499,6 @@ export const SearchInterface: React.FC<SearchInterfaceProps> = ({ onResultsChang
     setFocusToken((token) => token + 1);
   }, [setChatMode]);
 
-  const pickSuggestion = React.useCallback((prompt: string) => {
-    setInput(prompt);
-    void send({ prompt, requestType: modeId, attachments: [] });
-  }, [modeId, send]);
-
   /* ------------------------------------------------------------------- render */
   /* Runs are free, so the composer has nothing to warn about. */
   const composerFooter = undefined;
@@ -522,11 +517,7 @@ export const SearchInterface: React.FC<SearchInterfaceProps> = ({ onResultsChang
       )}
     >
       {turns.length === 0 ? (
-        <ChatWelcome
-          modeId={modeId}
-          onModeChange={setModeId}
-          onPickSuggestion={pickSuggestion}
-        />
+        <ChatWelcome />
       ) : (
         turns.map((turn, index) => (
           <ChatTurn
