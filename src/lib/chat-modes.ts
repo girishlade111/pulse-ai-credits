@@ -39,9 +39,7 @@ export const CHAT_MODES: ChatMode[] = [
     description: "Fast AI-powered search",
     placeholder: "Ask anything…",
     icon: MinimalisticIcons.Search,
-    credits: 1,
     stages: ["thinking", "grep", "read", "done"],
-    ledgerType: "normal_search",
     suggestions: [
       "What is a vector database and when should I use one?",
       "Explain the difference between REST and GraphQL.",
@@ -54,9 +52,7 @@ export const CHAT_MODES: ChatMode[] = [
     description: "Comprehensive research analysis",
     placeholder: "Topic for deep research…",
     icon: MinimalisticIcons.Research,
-    credits: 2,
     stages: ["thinking", "grep", "read", "edit", "done"],
-    ledgerType: "deep_research",
     suggestions: [
       "Research how retrieval-augmented generation changes enterprise search.",
       "Write a brief on the trade-offs of edge vs. serverless inference.",
@@ -69,9 +65,7 @@ export const CHAT_MODES: ChatMode[] = [
     description: "Advanced search with multiple sources",
     placeholder: "Professional search query…",
     icon: MinimalisticIcons.Pro,
-    credits: 3,
     stages: ["thinking", "grep", "read", "done"],
-    ledgerType: "normal_search",
     suggestions: [
       "Compare Postgres and MySQL for a high-write analytics workload.",
       "Summarise the trade-offs of event sourcing for order systems.",
@@ -84,9 +78,7 @@ export const CHAT_MODES: ChatMode[] = [
     description: "AI task execution and planning",
     placeholder: "Describe the task…",
     icon: MinimalisticIcons.Check,
-    credits: 10,
     stages: ["thinking", "read", "edit", "done"],
-    ledgerType: "normal_search",
     suggestions: [
       "Draft a 2-week plan to migrate a monolith to a modular monolith.",
       "Break down adding end-to-end tests to an existing React app.",
@@ -99,9 +91,7 @@ export const CHAT_MODES: ChatMode[] = [
     description: "AI image generation",
     placeholder: "Describe the image you want…",
     icon: MinimalisticIcons.Image,
-    credits: 1,
     stages: ["thinking", "edit", "done"],
-    ledgerType: "image_generation",
     suggestions: [
       "An isometric illustration of a solar-powered data centre at dusk.",
       "Editorial cover art: a lone researcher surrounded by orbiting research papers.",
@@ -114,10 +104,7 @@ export const CHAT_MODES: ChatMode[] = [
     description: "Ultra-comprehensive research",
     placeholder: "Complex research topic…",
     icon: MinimalisticIcons.Research,
-    credits: 40,
     stages: ["thinking", "grep", "read", "edit", "done"],
-    premium: true,
-    ledgerType: "deep_research",
     suggestions: [
       "An exhaustive survey of agent memory architectures and their failure modes.",
       "A full methodology review of retrieval evaluation for enterprise RAG.",
@@ -130,10 +117,7 @@ export const CHAT_MODES: ChatMode[] = [
     description: "Exhaustive search across all sources",
     placeholder: "Search everything…",
     icon: MinimalisticIcons.Search,
-    credits: 40,
     stages: ["thinking", "grep", "read", "edit", "done"],
-    premium: true,
-    ledgerType: "normal_search",
     suggestions: [
       "Map every open-source vector database with an active release in the last year.",
       "Build a collection plan for a public dataset on urban tree cover.",
@@ -148,6 +132,3 @@ const MODE_INDEX = new Map(CHAT_MODES.map((mode) => [mode.id, mode]));
 export const getMode = (id?: LlmRequestType | string): ChatMode =>
   (id && MODE_INDEX.get(id as LlmRequestType)) ||
   MODE_INDEX.get(DEFAULT_MODE_ID)!;
-
-export const getModeCost = (id?: LlmRequestType | string): number =>
-  getMode(id).credits;
