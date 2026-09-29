@@ -204,16 +204,16 @@ export const useChatSessions = (): ChatStore => {
     void (async () => {
       let sessions = (await loadSessions()).filter(isSession);
 
-      if (!sessions.length) {
-        const legacy = readLegacy();
-        if (legacy.sessions.length) {
-          sessions = legacy.sessions;
-          await saveSessions(sessions);
-          try {
-            window.localStorage.removeItem(LEGACY_KEY);
-          } catch {
-            // The copy is already in IndexedDB; leaving the old key is harmless.
-          }
+      // Carry over a history written by the previous localStorage version, so
+      // upgrading does not look like every chat was deleted.
+      const legacy = readLegacy();
+      if (!sessions.length && legacy.sessions.length) {
+        sessions = legacy.sessions;
+        await saveSessions(sessions);
+        try {
+          window.localStorage.removeItem(LEGACY_KEY);
+        } catch {
+          // The copy is already in IndexedDB; leaving the old key is harmless.
         }
       }
 
@@ -289,6 +289,9 @@ export const useChatSessions = (): ChatStore => {
   }, []);
 
   const deleteSession = useCallback((id: string) => {
+    // Remove from IndexedDB immediately; the debounced writer would otherwise
+    // rewrite the whole set, including the session being deleted.
+    void deleteStoredSession(id);
     setState((prev) => {
       const sessions = prev.sessions.filter((session) => session.id !== id);
       return {
@@ -314,6 +317,7 @@ export const useChatSessions = (): ChatStore => {
   );
 
   const clearAll = useCallback(() => {
+    void clearStoredSessions();
     setState({ sessions: [], activeId: null });
   }, []);
 
@@ -395,6 +399,7 @@ export const useChatSessions = (): ChatStore => {
     grouped,
     activeId: state.activeId,
     active,
+    ready,
     createSession,
     selectSession,
     deleteSession,
