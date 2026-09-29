@@ -439,20 +439,41 @@
   .md-hr {
     @apply my-6 border-0 border-t border-hairline;
   }
+  /* Code block: a header bar carries the language tag and the copy control,
+     so neither overlaps the code. */
+  .md-code-shell {
+    @apply my-4 overflow-hidden rounded-lg border border-hairline bg-canvas-soft;
+  }
+  .md-code-bar {
+    @apply flex items-center justify-between gap-2 border-b border-hairline px-3 py-1.5;
+  }
+  .md-code-lang {
+    @apply caption-upper truncate text-muted-soft;
+  }
+  .md-copy {
+    @apply inline-flex shrink-0 items-center gap-1.5 rounded px-1.5 py-1 text-xs text-muted transition-colors hover:bg-muted-surface hover:text-ink;
+  }
+  .md-copy svg {
+    @apply h-3 w-3;
+  }
   .md-pre {
-    @apply code relative my-4 overflow-x-auto rounded-lg border border-hairline bg-canvas-soft p-4 text-ink;
+    @apply code overflow-x-auto p-4 text-ink;
   }
   .md-code-block {
     @apply bg-transparent p-0;
-  }
-  .md-code-lang {
-    @apply caption-upper absolute right-3 top-2 text-muted-soft;
   }
   .md-code {
     @apply code rounded bg-muted-surface px-1.5 py-0.5 text-[0.85em] text-ink;
   }
   .md-link {
     @apply text-ink underline decoration-primary decoration-1 underline-offset-2 transition-colors hover:text-primary;
+  }
+  /* Dismisses the write-stream and shows the rest of the reply at once. */
+  .md-skip {
+    @apply mt-4 inline-flex items-center gap-1.5 caption text-muted-soft underline decoration-dotted underline-offset-2 transition-colors hover:text-ink;
+  }
+  .md-skip svg {
+    @apply h-3 w-3;
   }
 
   /* Streaming caret — a pseudo-element, so repainting it costs no React work. */

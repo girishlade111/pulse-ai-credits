@@ -16,7 +16,9 @@ import { getMode } from "@/lib/chat-modes";
 import { fileTypeLabel, formatFileSize, isImage } from "@/lib/chat-files";
 import { cn } from "@/lib/utils";
 import {
+  AlertTriangle,
   Check,
+  ChevronsDown,
   Copy,
   Download,
   FileText,
@@ -26,7 +28,6 @@ import {
   Sparkles,
   ThumbsDown,
   ThumbsUp,
-  AlertTriangle,
 } from "lucide-react";
 
 interface AttachmentListProps {
