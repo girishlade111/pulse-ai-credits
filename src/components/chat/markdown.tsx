@@ -14,6 +14,7 @@
 import React from "react";
 import { toast } from "sonner";
 import { Check, Copy } from "lucide-react";
+import { copyText } from "@/lib/clipboard";
 import { cn } from "@/lib/utils";
 
 const SAFE_PROTOCOL = /^(https?:|mailto:)/i;
