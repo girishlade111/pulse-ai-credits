@@ -46,9 +46,7 @@ export const ChatWelcome: React.FC<ChatWelcomeProps> = ({
               key={option.id}
               type="button"
               onClick={() => onModeChange(option.id)}
-              title={`${option.description} · ${option.credits} credit${
-                option.credits > 1 ? "s" : ""
-              }`}
+              title={option.description}
               className={cn(
                 "pill gap-1.5 transition-colors",
                 active
@@ -58,9 +56,6 @@ export const ChatWelcome: React.FC<ChatWelcomeProps> = ({
             >
               <Icon className="h-3 w-3" />
               {option.name}
-              <span className={cn("caption-upper", active ? "text-canvas/70" : "text-muted-soft")}>
-                {option.credits}c
-              </span>
             </button>
           );
         })}

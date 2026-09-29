@@ -189,9 +189,7 @@ export const ChatComposer: React.FC<ChatComposerProps> = ({
           <Select value={mode.id} onValueChange={onModeChange} disabled={busy}>
             <SelectTrigger
               className="h-9 w-9 shrink-0 border border-hairline bg-canvas-soft p-0"
-              title={`${mode.name} · ${mode.credits} credit${
-                mode.credits > 1 ? "s" : ""
-              } per run`}
+              title={mode.name}
               aria-label="Choose a tool"
             >
               <ModeIcon className="h-4 w-4 text-ink" />
@@ -422,9 +420,6 @@ const ModeRow: React.FC<{ option: ChatMode }> = ({ option }) => {
         <div className="min-w-0 flex-1">
           <div className="flex items-center justify-between gap-2">
             <span className="truncate text-sm">{option.name}</span>
-            <span className="caption-upper shrink-0 text-muted-soft">
-              {option.credits}c
-            </span>
           </div>
           <p className="mt-0.5 truncate text-xs text-muted">{option.description}</p>
         </div>
