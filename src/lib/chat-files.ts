@@ -1,19 +1,30 @@
 /**
  * Attachment handling for the composer: validation, text extraction, previews,
- * and the context block that gets folded into the prompt.
+ * and the content that gets folded into the request.
  *
  * Extracted text is trimmed before it reaches the prompt — a pasted 400-line
  * file otherwise swallows the context window and the model starts ignoring the
  * actual question.
+ *
+ * Two attachment kinds are read for real rather than described:
+ *  - text/code files, decoded in the browser
+ *  - PDFs, parsed lazily with pdf.js so the model sees the document's words
+ * Images are not read as text at all: they travel as vision parts, which is the
+ * only way the model can actually look at them.
  */
 
 import type { ChatAttachment } from "./chat-types";
+import type { LlmContentPart } from "./llm";
 
 export const MAX_FILES = 5;
 export const MAX_FILE_SIZE = 10 * 1024 * 1024;
 /** Per-file character budget folded into the prompt. */
-const MAX_CONTENT_CHARS = 4_000;
-const MAX_TOTAL_CONTEXT_CHARS = 20_000;
+const MAX_CONTENT_CHARS = 8_000;
+const MAX_TOTAL_CONTEXT_CHARS = 40_000;
+/** pdf.js is ~350KB, so it is only fetched when a PDF is actually attached. */
+const PDF_JS_URL = "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.6.82/build/pdf.min.mjs";
+const PDF_WORKER_URL = "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.6.82/build/pdf.worker.min.mjs";
+const PDF_MAX_PAGES = 25;
 
 const ALLOWED_MIME = new Set([
   "image/jpeg",
@@ -40,7 +51,12 @@ const ALLOWED_EXTENSION = /\.(txt|md|js|ts|tsx|jsx|py|java|cpp|h|html|css|json|x
 
 const CODE_EXTENSIONS = /\.(js|ts|tsx|jsx|mjs|cjs|py|java|cpp|c|h|go|rs|rb|php|sh|sql)$/i;
 
+/** Office documents a browser can decode as a zip of XML. */
+const RICH_DOC = /\.(docx|pptx|xlsx|odt|ods)$/i;
+
 export const isImage = (type: string): boolean => type.startsWith("image/");
+export const isPdf = (type: string, name = ""): boolean =>
+  type === "application/pdf" || /\.pdf$/i.test(name);
 
 export const validateFile = (file: File): string | null => {
   if (file.size > MAX_FILE_SIZE) return "File size too large. Maximum size is 10MB.";
