@@ -14,7 +14,7 @@ const COLUMNS: { heading: string; links: { label: string; to: string }[] }[] = [
   {
     heading: "Product",
     links: [
-      { label: "New chat", to: "/" },
+      { label: "Open workspace", to: "/workspace" },
       { label: "Features", to: "/features" },
     ],
   },

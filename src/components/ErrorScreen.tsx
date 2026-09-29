@@ -24,7 +24,6 @@ export const ErrorScreen: React.FC<ErrorScreenProps> = ({
   message,
   note,
 }) => {
-  const navigate = useNavigate();
 
   return (
     <main className="page flex min-h-dvh flex-col items-center justify-center py-16 text-center">
@@ -38,7 +37,9 @@ export const ErrorScreen: React.FC<ErrorScreenProps> = ({
       {note ? <p className="caption mt-2 text-muted-soft">{note}</p> : null}
 
       <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-        <Button onClick={() => navigate("/")}>Back to the chat</Button>
+        <Button asChild>
+          <Link to="/">Go home</Link>
+        </Button>
 
         {/*
          * `navigate(-1)` is a no-op on a fresh tab, so only offer "Go back"
