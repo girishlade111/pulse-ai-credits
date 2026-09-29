@@ -150,7 +150,8 @@ const run = async (browser, origin, label) => {
   try {
     const a = await run(browser, "http://localhost:8080", "localhost");
     if (lan) {
-      const b = await run(browser, lan, "LAN");
+      const url = lan.startsWith("http") ? lan : "http://" + lan;
+      const b = await run(browser, url, "LAN");
       check(
         "LAN origin is genuinely not a secure context (the real-world case)",
         !b.isSecure && !b.hasClipboard,
