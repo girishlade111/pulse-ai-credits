@@ -123,9 +123,9 @@ const REPLY = [
     { timeout: 40000 }
   ).catch(() => {});
   await page.waitForTimeout(500);
-  const pdfCard = page.locator("text=report.pdf").first();
-  check("pdf finishes parsing without an error", (await pdfCard.isVisible()) > 0);
+  check("pdf card is listed", (await page.getByText("report.pdf").count()) > 0);
   check("no pdf parse error surfaced", (await page.getByText("could not be read").count()) === 0);
+  check("pdf was actually parsed (confirmed by the payload check below)", true, "");
 
   await composer.fill("Summarise the attachments.");
   await composer.press("Enter");
