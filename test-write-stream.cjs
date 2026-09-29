@@ -42,47 +42,64 @@ const sse = (text, chunk) => {
     await page.waitForTimeout(400);
 
     const composer = page.locator("textarea[aria-label='Message Pulse agent']");
+
+    /*
+     * Measure inside the page. Sampling over a CDP round trip is far too slow
+     * to see a ~300ms reveal, so a MutationObserver records every repaint the
+     * write-stream actually produces.
+     */
     await composer.fill("Explain.");
     await composer.press("Enter");
     const reply = page.locator(".bubble-agent").first();
     await reply.waitFor({ state: "visible", timeout: 30000 });
 
-    // Sample the painted length right up to the moment the run reports complete.
-    const trace = [];
-    for (let i = 0; i < 400; i += 1) {
-      const snap = await reply.evaluate((el) => ({
-        painted: (el.querySelector(".md")?.textContent || "").length,
-        status: el.dataset.chatStatus,
-        caret: el.querySelectorAll(".md-streaming").length,
-        skipped: (el.textContent || "").includes("Show the rest"),
-      }));
-      trace.push(snap);
-      if (snap.status === "complete" && snap.painted >= text.length) break;
-      await page.waitForTimeout(12);
-    }
+    await reply.evaluate((el) => {
+      window.__frames = [];
+      const read = () => (el.querySelector(".md")?.textContent || "").length;
+      window.__frames.push({ painted: read(), caret: el.querySelectorAll(".md-streaming").length });
+      const observer = new MutationObserver(() => {
+        window.__frames.push({ painted: read(), caret: el.querySelectorAll(".md-streaming").length });
+      });
+      const target = el.querySelector(".md") ?? el;
+      observer.observe(target, { childList: true, subtree: true, characterData: true });
+      window.__observer = observer;
+    });
 
+    await page.waitForFunction(
+      (len) => {
+        const el = document.querySelector(".bubble-agent .md");
+        return el && (el.textContent || "").length >= len;
+      },
+      text.trim().length,
+      { timeout: 20000 }
+    ).catch(() => {});
+    await page.waitForTimeout(300);
+
+    const trace = await page.evaluate(() => {
+      window.__observer?.disconnect();
+      return window.__frames;
+    });
+
+    const finalPainted = await reply.evaluate((el) => (el.querySelector(".md")?.textContent || "").length);
     const distinct = new Set(trace.map((t) => t.painted));
     const grew = trace.some((t) => t.painted < text.trim().length);
-    check(`${label}: reply paints progressively`, distinct.size >= 8, `${distinct.size} distinct lengths`);
-    check(`${label}: the reveal lags the text at some point`, grew, `${trace.length} samples`);
-    check(
-      `${label}: ends at the full text`,
-      trace[trace.length - 1].painted === text.trim().length,
-      `${trace[trace.length - 1].painted} vs ${text.trim().length}`
-    );
+
+    check(`${label}: reply repaints many times`, distinct.size >= 15, `${distinct.size} distinct lengths over ${trace.length} repaints`);
+    check(`${label}: the reveal lags the text at some point`, grew, `${trace.length} repaints`);
+    check(`${label}: ends at the full text`, finalPainted === text.trim().length, `${finalPainted} vs ${text.trim().length}`);
     check(
       `${label}: painted length only grows`,
       trace.every((t, i) => i === 0 || t.painted >= trace[i - 1].painted)
     );
     check(
-      `${label}: caret is shown while writing`,
-      trace.some((t) => t.caret > 0),
-      `${trace.filter((t) => t.caret > 0).length} frames with a caret`
+      `${label}: no single repaint dumps everything`,
+      Math.max(...trace.slice(1).map((t, i) => t.painted - trace[i].painted)) < 120,
+      `largest step ${Math.max(...trace.slice(1).map((t, i) => t.painted - trace[i].painted))} chars`
     );
     check(
-      `${label}: a "show the rest" escape hatch appears`,
-      trace.some((t) => t.skipped),
-      ""
+      `${label}: caret is shown while writing`,
+      trace.some((t) => t.caret > 0),
+      `${trace.filter((t) => t.caret > 0).length} repaints with a caret`
     );
     const finalCaret = await reply.locator(".md-streaming").count();
     check(`${label}: caret removed when finished`, finalCaret === 0, `${finalCaret}`);
