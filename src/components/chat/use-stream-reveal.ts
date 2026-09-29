@@ -96,9 +96,7 @@ export const useStreamReveal = (text: string, streaming: boolean): string => {
       const backlog = text.length - current;
       // Proportional catch-up on top of the reading-pace floor, so the reveal
       // smooths bursts without ever drifting arbitrarily far behind.
-      const rate = BASE_RATE + backlog / CATCHUP_MS;
-      const step = Math.max(1, Math.ceil(rate * elapsed));
-      const next = Math.min(text.length, current + step);
+      const next = Math.min(text.length, current + revealStep(backlog, elapsed));
 
       cursor.current = next;
       setRevealed(text.slice(0, next));
