@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { MinimalisticIcons } from "@/components/ui/minimalistic-icons";
 import { Footer } from "@/components/layout/Footer";
+import { BackButton } from "@/components/layout/BackButton";
 import { TimelinePill, type TimelineStage } from "@/components/TimelinePill";
 
 // Interface previews for the advanced tools
@@ -18,7 +19,6 @@ import taskPreview from "@/images/4.png";
 interface Feature {
   id: string;
   name: string;
-  credits: number;
   icon: (props: { className?: string }) => React.ReactElement;
   summary: string;
   detail: string;
@@ -34,7 +34,6 @@ const FEATURES: Feature[] = [
   {
     id: "quick_search",
     name: "Quick Search",
-    credits: 1,
     icon: MinimalisticIcons.Search,
     summary: "Ask anything — instant, sourced answers.",
     detail:
@@ -52,7 +51,6 @@ const FEATURES: Feature[] = [
   {
     id: "deep_research",
     name: "Deep Research",
-    credits: 2,
     icon: MinimalisticIcons.Research,
     summary: "Multi-source analysis with cross-referenced findings.",
     detail:
@@ -66,7 +64,6 @@ const FEATURES: Feature[] = [
   {
     id: "image_generation",
     name: "Image Generation",
-    credits: 1,
     icon: MinimalisticIcons.Image,
     summary: "Describe the image. Get the image.",
     detail:
@@ -80,7 +77,6 @@ const FEATURES: Feature[] = [
   {
     id: "pro_search",
     name: "Pro Search",
-    credits: 3,
     icon: MinimalisticIcons.Pro,
     summary: "Ranked URLs with long-form content, built for agents.",
     detail:
@@ -95,7 +91,6 @@ const FEATURES: Feature[] = [
   {
     id: "task",
     name: "Task Automation",
-    credits: 10,
     icon: MinimalisticIcons.Check,
     summary: "Enrich entity lists with fresh, verified records.",
     detail:
@@ -110,7 +105,6 @@ const FEATURES: Feature[] = [
   {
     id: "deep_research_8x",
     name: "8x Deep Research",
-    credits: 40,
     icon: MinimalisticIcons.Research,
     summary: "Exhaustive research with professional-grade output.",
     detail:
@@ -125,7 +119,6 @@ const FEATURES: Feature[] = [
   {
     id: "find_all",
     name: "Find All",
-    credits: 40,
     icon: MinimalisticIcons.Search,
     summary: "Build complete datasets from across the web.",
     detail:
@@ -154,15 +147,17 @@ const Features: React.FC = () => {
     <main>
       <section className="section-tight">
         <div className="page">
+          <div className="mb-10">
+            <BackButton className="-ml-2" />
+          </div>
           <div className="max-w-3xl border-b border-hairline pb-10">
             <p className="section-label mb-3">Capabilities</p>
             <h1 className="display-lg">
-              Seven tools. One credit ledger. Every run traced.
+              Seven tools. Every run traced.
             </h1>
             <p className="body-md mt-4 text-muted">
-              Each tool declares its credit cost, its response window, and the
-              stages it walks through in the agent timeline. Nothing is
-              approximate.
+              Each tool declares its response window and the stages it walks
+              through in the agent timeline. Nothing is approximate.
             </p>
           </div>
 
@@ -174,9 +169,6 @@ const Features: React.FC = () => {
                 <article key={feature.id} className="card flex flex-col p-6">
                   <div className="flex items-center justify-between gap-4">
                     <Icon className="h-5 w-5 text-ink" />
-                    <span className="pill-badge">
-                      {feature.credits} credit{feature.credits > 1 ? "s" : ""}
-                    </span>
                   </div>
                   <h2 className="title-md mt-6">{feature.name}</h2>
                   <p className="body-sm mt-2 min-h-[2.5rem] text-muted">
@@ -227,9 +219,6 @@ const Features: React.FC = () => {
                           <Icon className="h-5 w-5 text-ink" />
                           <h3 className="display-sm">{feature.name}</h3>
                         </div>
-                        <span className="pill-badge shrink-0">
-                          {feature.credits} credits
-                        </span>
                       </div>
 
                       <p className="body-md mt-5 text-muted">{feature.detail}</p>
@@ -294,7 +283,7 @@ const Features: React.FC = () => {
             </div>
           </div>
 
-          {/* comparison: 8x research is business-only */}
+          {/* comparison: standard vs 8x research */}
           <div className="mt-20">
             <div className="card overflow-hidden">
               <div className="grid grid-cols-1 md:grid-cols-2">
@@ -302,7 +291,7 @@ const Features: React.FC = () => {
                   <p className="section-label mb-3">Standard</p>
                   <h3 className="display-sm">Deep Research</h3>
                   <p className="body-sm mt-2 text-muted">
-                    2 credits · synchronous · 30 seconds to a minute
+                    Synchronous .{1,3} 30 seconds to a minute
                   </p>
                   <ul className="mt-6 space-y-2.5">
                     {[
@@ -320,7 +309,7 @@ const Features: React.FC = () => {
                   <p className="section-label mb-3">Business</p>
                   <h3 className="display-sm">8x Deep Research</h3>
                   <p className="body-sm mt-2 text-muted">
-                    40 credits · asynchronous · 4 to 30 minutes
+                    Asynchronous .{1,3} 4 to 30 minutes
                   </p>
                   <ul className="mt-6 space-y-2.5">
                     {[
@@ -335,11 +324,6 @@ const Features: React.FC = () => {
                   </ul>
                 </div>
               </div>
-              <div className="border-t border-hairline p-6 md:p-8">
-                <Button onClick={() => navigate("/plans")}>
-                  Compare plans
-                </Button>
-              </div>
             </div>
           </div>
 
@@ -347,7 +331,7 @@ const Features: React.FC = () => {
           <section className="py-24">
             <div className="text-center">
               <h2 className="display-lg mx-auto max-w-2xl text-balance">
-                Ten credits to start. Pick a tool and run it.
+                Pick a tool and run it.
               </h2>
               <Button className="mt-8" onClick={() => navigate("/workspace")}>
                 Get started free

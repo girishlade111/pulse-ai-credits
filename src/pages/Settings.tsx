@@ -1,146 +1,58 @@
-import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { Button } from "@/components/ui/button";
+import React from "react";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
 import { Footer } from "@/components/layout/Footer";
-import { toast } from "sonner";
-import {
-  ArrowLeft,
-  CreditCard,
-  HelpCircle,
-  RotateCcw,
-  Save,
-  Type,
-} from "lucide-react";
-import { useWorkspace } from "@/contexts/WorkspaceContext";
+import { BackButton } from "@/components/layout/BackButton";
+import { HelpCircle, Type } from "lucide-react";
+import { READING_SIZES, usePreferences } from "@/contexts/PreferencesContext";
 
-const FONT_SIZE_KEY = "pulseai-font-size";
-
-const SIZES = [
-  { value: "small", label: "Small", sample: "Compact reading size" },
-  { value: "medium", label: "Medium", sample: "The default reading size" },
-  { value: "large", label: "Large", sample: "Comfortable on long sessions" },
-  { value: "extra-large", label: "Extra large", sample: "Maximum legibility" },
-];
-
+/**
+ * Settings now holds only real preferences.
+ *
+ * The credits card used to live here, along with "Change plan" and "Reset local
+ * workspace" — the app no longer meters anything, so all three went with it.
+ * Reading size applies as you choose it and persists on its own, so there is
+ * nothing left to save by hand.
+ */
 const Settings = () => {
-  const { credits, subscription, reset } = useWorkspace();
-  const navigate = useNavigate();
-
-  const [fontSize, setFontSize] = useState("medium");
-
-  // Load persisted preferences
-  React.useEffect(() => {
-    const saved = localStorage.getItem(FONT_SIZE_KEY);
-    if (saved && SIZES.some((size) => size.value === saved)) {
-      setFontSize(saved);
-    }
-  }, []);
-
-  // Reading size applies live so the choice is legible before saving
-  React.useEffect(() => {
-    document.body.classList.remove(
-      "font-small",
-      "font-medium",
-      "font-large",
-      "font-extra-large"
-    );
-    document.body.classList.add(`font-${fontSize}`);
-    return () => {
-      document.body.classList.remove(
-        "font-small",
-        "font-medium",
-        "font-large",
-        "font-extra-large"
-      );
-    };
-  }, [fontSize]);
-
-  const handleSavePreferences = () => {
-    try {
-      localStorage.setItem(FONT_SIZE_KEY, fontSize);
-      toast.success("Reading size saved");
-    } catch {
-      toast.error("Failed to save preferences");
-    }
-  };
-
-  const handleResetWorkspace = () => {
-    reset();
-    toast.success("Local workspace reset to ten credits");
-  };
+  const { readingSize, setReadingSize } = usePreferences();
 
   return (
     <main>
       <section className="section-tight">
         <div className="page max-w-3xl">
           <div className="mb-12 flex items-start gap-4 border-b border-hairline pb-8">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => navigate(-1)}
-              aria-label="Go back"
-            >
-              <ArrowLeft />
-            </Button>
+            <BackButton className="-ml-2 mt-1" />
             <div>
               <p className="section-label mb-3">Settings</p>
               <h1 className="display-md">Workspace settings</h1>
             </div>
           </div>
 
-          {/* credits */}
-          <section className="card p-6">
-            <div className="flex items-center gap-3 border-b border-hairline pb-5">
-              <CreditCard className="h-4 w-4 text-ink" />
-              <div>
-                <h2 className="title-md">Credits</h2>
-                <p className="body-sm text-muted">
-                  Your balance and plan, stored in this browser.
-                </p>
-              </div>
-            </div>
-            <dl className="mt-6 grid grid-cols-2 gap-6">
-              <div>
-                <dt className="section-label">Available</dt>
-                <dd className="display-sm mt-2">{credits.current_credits}</dd>
-              </div>
-              <div>
-                <dt className="section-label">Plan</dt>
-                <dd className="display-sm mt-2">{subscription.name}</dd>
-              </div>
-            </dl>
-            <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-              <Button variant="secondary" className="flex-1" onClick={() => navigate("/plans")}>
-                <CreditCard />
-                Change plan
-              </Button>
-              <Button variant="outline" className="flex-1" onClick={handleResetWorkspace}>
-                <RotateCcw />
-                Reset local workspace
-              </Button>
-            </div>
-          </section>
-
           {/* reading size */}
-          <section className="card mt-6 p-6">
+          <section className="card p-6">
             <div className="flex items-center gap-3 border-b border-hairline pb-5">
               <Type className="h-4 w-4 text-ink" />
               <div>
                 <h2 className="title-md">Reading size</h2>
-                <p className="body-sm text-muted">Scales running text across the workspace.</p>
+                <p className="body-sm text-muted">
+                  Scales running text across the workspace. Saved as you change it.
+                </p>
               </div>
             </div>
             <div className="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="fontSize">Size</Label>
-                <Select value={fontSize} onValueChange={setFontSize}>
+                <Select
+                  value={readingSize}
+                  onValueChange={(value) => setReadingSize(value as typeof readingSize)}
+                >
                   <SelectTrigger id="fontSize">
                     <SelectValue placeholder="Select a size" />
                   </SelectTrigger>
                   <SelectContent>
-                    {SIZES.map((size) => (
+                    {READING_SIZES.map((size) => (
                       <SelectItem key={size.value} value={size.value}>
                         {size.label}
                       </SelectItem>
@@ -151,14 +63,10 @@ const Settings = () => {
               <div className="rounded-md border border-hairline bg-canvas-soft p-4">
                 <p className="section-label mb-2">Preview</p>
                 <p className="body-sm text-muted">
-                  {SIZES.find((size) => size.value === fontSize)?.sample}.
+                  {READING_SIZES.find((size) => size.value === readingSize)?.sample}.
                 </p>
               </div>
             </div>
-            <Button variant="secondary" className="mt-6" onClick={handleSavePreferences}>
-              <Save />
-              Save preference
-            </Button>
           </section>
 
           {/* support */}
@@ -167,7 +75,9 @@ const Settings = () => {
               <HelpCircle className="h-4 w-4 text-ink" />
               <div>
                 <h2 className="title-md">Support</h2>
-                <p className="body-sm text-muted">Reach a human, or read the credit system.</p>
+                <p className="body-sm text-muted">
+                  Something not working, or a reply that came out wrong?
+                </p>
               </div>
             </div>
             <div className="mt-6 flex flex-col gap-3 sm:flex-row">
@@ -178,10 +88,6 @@ const Settings = () => {
               >
                 <HelpCircle />
                 Contact support
-              </Button>
-              <Button variant="outline" className="flex-1" onClick={() => navigate("/plans")}>
-                <CreditCard />
-                How credits work
               </Button>
             </div>
           </section>
