@@ -3,11 +3,12 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { PreferencesProvider } from "@/contexts/PreferencesContext";
 import { ProviderProvider } from "@/contexts/ProviderContext";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { Navbar } from "@/components/layout/Navbar";
+import Index from "./pages/Index";
 import Workspace from "./pages/Workspace";
 import Features from "./pages/Features";
 import Settings from "./pages/Settings";
@@ -35,14 +36,17 @@ const App = () => {
                 <ErrorBoundary>
                   <Routes>
                     {/*
-                     * The chatbot is the front door. `/workspace` redirects here
-                     * so older bookmarks and links keep working.
+                     * The landing page is the front door; the chat lives at
+                     * /workspace and the "Start" buttons link here.
                      */}
                     <Route
                       path="/"
+                      element={<Index onChatModeChange={setIsChatMode} />}
+                    />
+                    <Route
+                      path="/workspace"
                       element={<Workspace onChatModeChange={setIsChatMode} />}
                     />
-                    <Route path="/workspace" element={<Navigate to="/" replace />} />
                     <Route path="/features" element={<Features />} />
                     <Route path="/settings" element={<Settings />} />
                     <Route path="/404" element={<NotFound />} />

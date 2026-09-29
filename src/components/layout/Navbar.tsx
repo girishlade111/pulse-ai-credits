@@ -8,7 +8,10 @@ export const Wordmark: React.FC<{ className?: string }> = ({ className }) => (
   <PulseLogo size="sm" className={className} animated />
 );
 
-const LINKS = [{ to: "/features", label: "Features" }];
+const LINKS = [
+  { to: "/features", label: "Features" },
+  { to: "/workspace", label: "Workspace" },
+];
 
 export const Navbar: React.FC = () => (
   <nav className="topnav">
@@ -30,7 +33,7 @@ export const Navbar: React.FC = () => (
           Settings
         </Link>
         <Button asChild variant="outline">
-          <Link to="/">New chat</Link>
+          <Link to="/workspace">New chat</Link>
         </Button>
       </div>
     </div>
