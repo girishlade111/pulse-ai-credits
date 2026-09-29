@@ -175,15 +175,11 @@ export const SearchInterface: React.FC<SearchInterfaceProps> = ({ onResultsChang
     []
   );
 
-  // Object URLs are owned by the composer; drop them when the view unmounts.
+  // Object URLs are owned by the transcript now, not the composer, so they are
+  // NOT released on unmount: the chat history outlives this component and its
+  // previews would point at dead blobs. The browser reclaims them on unload.
   const attachmentsRef = React.useRef(attachments);
   attachmentsRef.current = attachments;
-  React.useEffect(
-    () => () => {
-      revokeAttachments(attachmentsRef.current);
-    },
-    []
-  );
 
   /* ------------------------------------------------------------------ sending */
 
@@ -352,7 +348,12 @@ export const SearchInterface: React.FC<SearchInterfaceProps> = ({ onResultsChang
       }
 
       setInput("");
-      revokeAttachments(request.attachments);
+      /*
+       * Deliberately NOT revoked here. The prompt keeps these same object URLs
+       * for its transcript thumbnail, so releasing them on send left every
+       * image preview in the chat pointing at a dead blob. They are released
+       * when the attachment is removed, or when the composer unmounts.
+       */
       setAttachments([]);
 
       await runRequest(request);
