@@ -9,12 +9,22 @@
 
 import React from "react";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Wordmark } from "@/components/layout/Navbar";
 import type { ChatStore } from "@/lib/chat-store";
 import { SIDEBAR_MAX, SIDEBAR_MIN } from "@/lib/chat-store";
+import { useProvider } from "@/contexts/ProviderContext";
+import { PROVIDER_LIST } from "@/lib/providers";
 import { cn } from "@/lib/utils";
 import {
   Check,
+  Cpu,
   History,
   LayoutDashboard,
   MessageSquarePlus,
@@ -64,6 +74,7 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
   const [renamingId, setRenamingId] = React.useState<string | null>(null);
   const [draftTitle, setDraftTitle] = React.useState("");
   const renameInputRef = React.useRef<HTMLInputElement>(null);
+  const { provider, setProvider, meta } = useProvider();
 
   React.useEffect(() => {
     if (renamingId) renameInputRef.current?.select();
@@ -378,6 +389,34 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
         </nav>
 
         <div className="space-y-0.5 border-t border-hairline p-3">
+          <div className="mb-3 px-1">
+            <label
+              htmlFor="llm-provider"
+              className="mb-1.5 flex items-center gap-1.5 section-label"
+            >
+              <Cpu className="h-3 w-3" />
+              AI provider
+            </label>
+            <Select value={provider} onValueChange={setProvider}>
+              <SelectTrigger id="llm-provider" className="w-full">
+                <SelectValue placeholder="Select a provider" />
+              </SelectTrigger>
+              <SelectContent>
+                {PROVIDER_LIST.map((item) => (
+                  <SelectItem key={item.id} value={item.id}>
+                    <span className="flex flex-col items-start">
+                      <span>{item.label}</span>
+                      <span className="caption text-muted-soft">{item.model}</span>
+                    </span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {meta.note && (
+              <p className="mt-1.5 caption text-muted-soft">{meta.note}</p>
+            )}
+          </div>
+
           <SidebarLink icon={LayoutDashboard} label="Dashboard" onClick={() => go("/dashboard")} />
           <SidebarLink
             icon={Sparkles}

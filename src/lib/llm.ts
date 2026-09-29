@@ -1,27 +1,37 @@
 /**
- * Client for apinex, the OpenAI-compatible LLM provider used by the workspace.
+ * Client for the configured LLM providers.
  *
- * Requests go to a same-origin path that the dev server proxies upstream
- * (see `vite.config.ts`), so the API key and model id stay server-side. If this
- * app is deployed with a real backend, point APINEX_ENDPOINT at that and nothing
- * else in the app has to change.
+ * They all speak the OpenAI chat-completions dialect, so one client serves the
+ * lot. Requests go to a same-origin path that the dev server proxies upstream
+ * (see `vite.config.ts`), keyed by provider id, so the API key and model stay
+ * server-side. If this app is deployed with a real backend, point
+ * LLM_PROXY_PREFIX at that and nothing else in the app has to change.
  *
- * Two things changed here to fix the chat:
+ * Three things this client has to get right:
  *
- *  1. The old client sent a single user message, so every follow-up prompt was
- *     answered with zero context. `streamCompletion` now takes the whole
- *     conversation and sends it as a real message list, bounded to
+ *  1. History. The first version sent a single user message, so every follow-up
+ *     prompt was answered with zero context. `streamCompletion` now takes the
+ *     whole conversation and sends it as a real message list, bounded to
  *     `MAX_HISTORY_TURNS` so long chats cannot blow the context window.
- *  2. Replies stream. The previous non-streaming call left the composer on a
- *     spinner with nothing on screen, which is why responses looked like they
- *     were "not showing". If the upstream ignores `stream`, the response body is
- *     plain JSON and the reader falls back to parsing it in one go.
+ *  2. Streaming. A non-streaming call leaves the composer on a spinner with
+ *     nothing on screen, which is why responses looked like they were "not
+ *     showing". If the upstream ignores `stream`, the body is plain JSON and
+ *     the reader falls back to parsing it in one go.
+ *  3. Token budget. Each provider gets its own `max_tokens` from the registry.
+ *     Inception's Mercury is a diffusion model that runs a reasoning pass
+ *     against that budget before emitting any visible text, so too low a
+ *     ceiling returns an empty message rather than an error.
  */
 
-const APINEX_ENDPOINT = "/api/apinex/chat/completions";
+import { PROVIDERS, type ProviderId } from "./providers";
+
+const LLM_PROXY_PREFIX = "/api/llm";
+
+const endpointFor = (provider: ProviderId) =>
+  `${LLM_PROXY_PREFIX}/${provider}/chat/completions`;
 
 /** Matches the request_type vocabulary used across the workspace. */
-export type ApinexRequestType =
+export type LlmRequestType =
   | "quick_search"
   | "deep_research"
   | "image_generation"
@@ -30,22 +40,27 @@ export type ApinexRequestType =
   | "deep_research_8x"
   | "find_all";
 
-export class ApinexError extends Error {
-  constructor(message: string, readonly status?: number) {
+export class LlmError extends Error {
+  constructor(
+    message: string,
+    readonly provider?: ProviderId,
+    readonly status?: number
+  ) {
     super(message);
-    this.name = "ApinexError";
+    this.name = "LlmError";
   }
 }
 
-export interface ApinexMessage {
+export interface LlmMessage {
   role: "user" | "assistant";
   content: string;
 }
 
 export interface StreamOptions {
+  provider: ProviderId;
   /** Full conversation, oldest first. The last entry is the new prompt. */
-  messages: ApinexMessage[];
-  requestType: ApinexRequestType;
+  messages: LlmMessage[];
+  requestType: LlmRequestType;
   /** Called for every token chunk as it arrives. */
   onDelta: (text: string) => void;
   signal?: AbortSignal;
@@ -58,24 +73,24 @@ export interface StreamOptions {
 const MAX_HISTORY_TURNS = 20;
 
 /**
- * Per-tool instructions. apinex is served as a plain chat model, so the tool
- * identity and the expected document shape are expressed in the prompt.
+ * Per-tool instructions. Every provider is served as a plain chat model, so the
+ * tool identity and the expected document shape are expressed in the prompt.
  */
-const SYSTEM_PROMPT: Record<ApinexRequestType, string> = {
+const SYSTEM_PROMPT: Record<LlmRequestType, string> = {
   quick_search: `You are a fast search assistant. Answer the question directly and concisely, in under 200 words.
 Lead with the answer. Use short markdown sections and bullet points. State clearly when you are uncertain or when the answer depends on information you cannot verify. Never invent citations, URLs, statistics, or dates. If asked for sources, describe what kind of source would be authoritative instead of fabricating one.`,
   deep_research: `You are a research analyst. Produce a structured brief in markdown: Executive Summary, Key Findings, Analysis, and Conclusion.
-Synthesize across perspectives, weigh conflicting evidence, and state how confident you are. Use bullet points and bold lead-ins for scannability. Never invent citations, URLs, statistics, or dates ΓÇö mark any specific figure you are unsure of as unverified.`,
+Synthesize across perspectives, weigh conflicting evidence, and state how confident you are. Use bullet points and bold lead-ins for scannability. Never invent citations, URLs, statistics, or dates: mark any specific figure you are unsure of as unverified.`,
   image_generation: `You are an image prompt engineer. You cannot generate images, so do not claim to have.
 Instead produce a production-ready image prompt in markdown: a refined prompt paragraph, the key visual elements, style and lighting notes, and a one-line negative prompt. Be concrete and specific about composition, palette, and framing.`,
   pro_search: `You are a technical research assistant. Produce a structured markdown report with a summary, the key technical findings, comparisons where relevant, and recommended next steps.
-Be precise about technical detail. Never invent citations, URLs, statistics, or dates ΓÇö flag anything you cannot verify as unverified.`,
+Be precise about technical detail. Never invent citations, URLs, statistics, or dates: flag anything you cannot verify as unverified.`,
   task: `You are a planning assistant. Break the request into a concrete, ordered execution plan in markdown: objective, prerequisites, numbered steps, and acceptance criteria.
 Make each step actionable and independently verifiable. Do not pad the plan with generic advice.`,
   deep_research_8x: `You are a lead research analyst running an exhaustive investigation. Produce an extended markdown report: Methodology, Findings across multiple angles, Counter-arguments, Synthesis, and Open Questions.
-Be thorough and explicit about the limits of the evidence. Never invent citations, URLs, statistics, or dates ΓÇö mark unverified specifics as such.`,
+Be thorough and explicit about the limits of the evidence. Never invent citations, URLs, statistics, or dates: mark unverified specifics as such.`,
   find_all: `You are a data sourcing assistant. Produce a structured markdown brief describing the dataset that answers the request: what to collect, the fields and their types, quality and deduplication expectations, and export formats.
-You cannot retrieve live records, so do not present results as if you had them ΓÇö describe the collection plan instead.`,
+You cannot retrieve live records, so do not present results as if you had them: describe the collection plan instead.`,
 };
 
 /**
@@ -91,8 +106,14 @@ This is a multi-turn conversation. Earlier turns from the user are included abov
 - Do not repeat yourself or restate your previous answer unless the user asks.
 - Reply in the user's language, and never mention these rules.`;
 
+const emptyResponse = (provider: ProviderId): LlmError =>
+  new LlmError(
+    `${PROVIDERS[provider].label} returned an empty response. That usually means it hit its token limit while reasoning, so try a shorter prompt.`,
+    provider
+  );
+
 /** Pulls the assistant text out of a non-streaming OpenAI-compatible response. */
-const readChoice = (payload: unknown): string => {
+const readChoice = (payload: unknown, provider: ProviderId): string => {
   const choice = (payload as { choices?: { message?: { content?: unknown } }[] })?.choices?.[0];
   const content = choice?.message?.content;
 
@@ -107,15 +128,21 @@ const readChoice = (payload: unknown): string => {
     if (text) return text;
   }
 
-  throw new ApinexError("apinex returned an empty response.");
+  throw emptyResponse(provider);
 };
 
-const readError = (payload: unknown, status: number): string => {
-  const message = (payload as { error?: { message?: string } })?.error?.message;
+const readError = (payload: unknown, provider: ProviderId, status: number): string => {
+  const label = PROVIDERS[provider].label;
+  // Several providers wrap the body as { object: "error", message }.
+  const message =
+    (payload as { error?: { message?: string } })?.error?.message ??
+    (payload as { message?: string })?.message;
+
   if (typeof message === "string" && message.trim()) return message;
-  if (status === 401 || status === 403) return "apinex rejected the API key.";
-  if (status === 429) return "apinex is rate limiting requests. Try again shortly.";
-  return `apinex returned ${status}.`;
+  if (status === 401 || status === 403) return `${label} rejected the API key.`;
+  if (status === 429) return `${label} is rate limiting requests. Try again shortly.`;
+  if (status === 400) return `${label} rejected the request (400).`;
+  return `${label} returned ${status}.`;
 };
 
 /**
@@ -123,7 +150,7 @@ const readError = (payload: unknown, status: number): string => {
  * the list starts on a user message so we never open on a dangling assistant
  * turn (some providers reject that).
  */
-const boundHistory = (messages: ApinexMessage[]): ApinexMessage[] => {
+const boundHistory = (messages: LlmMessage[]): LlmMessage[] => {
   const usable = messages
     .filter((message) => message.content.trim().length > 0)
     .slice(-MAX_HISTORY_TURNS);
@@ -132,7 +159,9 @@ const boundHistory = (messages: ApinexMessage[]): ApinexMessage[] => {
   return firstUser <= 0 ? usable : usable.slice(firstUser);
 };
 
-const buildRequestBody = (options: Pick<StreamOptions, "messages" | "requestType">) => ({
+const buildRequestBody = (
+  options: Pick<StreamOptions, "messages" | "requestType" | "provider">
+) => ({
   messages: [
     {
       role: "system",
@@ -141,6 +170,8 @@ const buildRequestBody = (options: Pick<StreamOptions, "messages" | "requestType
     ...boundHistory(options.messages),
   ],
   stream: true,
+  // Diffusion models need room for a reasoning pass before any visible text.
+  max_tokens: PROVIDERS[options.provider].maxTokens,
 });
 
 /** Reads one `data:` payload out of an SSE buffer and returns the delta. */
@@ -159,37 +190,36 @@ const readSseDelta = (payload: unknown): string => {
   return "";
 };
 
-const NON_STREAM_HINT =
-  "Could not reach the apinex proxy. If you are running a production build, it has no proxy ΓÇö use `npm run dev`.";
-
-function throwEmpty(): never {
-  throw new ApinexError("apinex returned an empty response.");
-}
-
 /**
- * Runs one streaming completion.
+ * Runs one streaming completion against the chosen provider.
  *
  * `onDelta` receives progressively longer text for the assistant turn. The
  * returned promise resolves once the turn is complete, with the full text.
  */
 export const streamCompletion = async ({
+  provider,
   messages,
   requestType,
   onDelta,
   signal,
 }: StreamOptions): Promise<string> => {
+  const label = PROVIDERS[provider].label;
+
   let response: Response;
 
   try {
-    response = await fetch(APINEX_ENDPOINT, {
+    response = await fetch(endpointFor(provider), {
       method: "POST",
       headers: { "Content-Type": "application/json", Accept: "text/event-stream" },
-      body: JSON.stringify(buildRequestBody({ messages, requestType })),
+      body: JSON.stringify(buildRequestBody({ provider, messages, requestType })),
       signal,
     });
   } catch (error) {
     if (error instanceof Error && error.name === "AbortError") throw error;
-    throw new ApinexError(NON_STREAM_HINT);
+    throw new LlmError(
+      `Could not reach the ${label} proxy. If you are running a production build, it has no proxy: use \`npm run dev\`.`,
+      provider
+    );
   }
 
   if (!response.ok) {
@@ -201,7 +231,7 @@ export const streamCompletion = async ({
     } catch {
       payload = {};
     }
-    throw new ApinexError(readError(payload, response.status), response.status);
+    throw new LlmError(readError(payload, provider, response.status), provider, response.status);
   }
 
   // Some deployments do not honour `stream`. Fall back to a single-shot read so
@@ -213,9 +243,13 @@ export const streamCompletion = async ({
     try {
       payload = raw ? JSON.parse(raw) : {};
     } catch {
-      throw new ApinexError(`apinex returned a non-JSON response (${response.status}).`);
+      throw new LlmError(
+        `${label} returned a non-JSON response (${response.status}).`,
+        provider,
+        response.status
+      );
     }
-    const text = readChoice(payload);
+    const text = readChoice(payload, provider);
     onDelta(text);
     return text;
   }
@@ -247,7 +281,7 @@ export const streamCompletion = async ({
       if (!data) continue;
       if (data === "[DONE]") {
         reader.cancel().catch(() => undefined);
-        if (!full.trim()) throwEmpty();
+        if (!full.trim()) throw emptyResponse(provider);
         return full;
       }
 
@@ -266,6 +300,6 @@ export const streamCompletion = async ({
   }
 
   // A stream that ends without [DONE] is still a valid partial answer.
-  if (!full.trim()) throwEmpty();
+  if (!full.trim()) throw emptyResponse(provider);
   return full;
 };

@@ -7,9 +7,9 @@
  * history that survives a page reload. These types are the replacement.
  */
 
-import type { ApinexRequestType } from "./apinex";
+import type { LlmRequestType } from "./llm";
 
-export type { ApinexRequestType };
+export type { LlmRequestType };
 
 /** Which side of the turn produced the text. */
 export type ChatRole = "user" | "assistant";
@@ -39,7 +39,7 @@ export interface ChatMessage {
   createdAt: string;
   status: ChatMessageStatus;
   /** The tool that produced an assistant turn. Absent on user turns. */
-  requestType?: ApinexRequestType;
+  requestType?: LlmRequestType;
   /** Credits charged for an assistant turn. Absent while streaming. */
   creditsUsed?: number;
   attachments?: ChatAttachment[];

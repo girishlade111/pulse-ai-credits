@@ -7,12 +7,12 @@
 import type { ComponentType } from "react";
 import { MinimalisticIcons } from "@/components/ui/minimalistic-icons";
 import type { TimelineStage } from "@/components/TimelinePill";
-import type { ApinexRequestType } from "./apinex";
+import type { LlmRequestType } from "./llm";
 
 type IconType = ComponentType<{ className?: string; size?: number }>;
 
 export interface ChatMode {
-  id: ApinexRequestType;
+  id: LlmRequestType;
   name: string;
   shortName: string;
   description: string;
@@ -141,13 +141,13 @@ export const CHAT_MODES: ChatMode[] = [
   },
 ];
 
-export const DEFAULT_MODE_ID: ApinexRequestType = "quick_search";
+export const DEFAULT_MODE_ID: LlmRequestType = "quick_search";
 
 const MODE_INDEX = new Map(CHAT_MODES.map((mode) => [mode.id, mode]));
 
-export const getMode = (id?: ApinexRequestType | string): ChatMode =>
-  (id && MODE_INDEX.get(id as ApinexRequestType)) ||
+export const getMode = (id?: LlmRequestType | string): ChatMode =>
+  (id && MODE_INDEX.get(id as LlmRequestType)) ||
   MODE_INDEX.get(DEFAULT_MODE_ID)!;
 
-export const getModeCost = (id?: ApinexRequestType | string): number =>
+export const getModeCost = (id?: LlmRequestType | string): number =>
   getMode(id).credits;

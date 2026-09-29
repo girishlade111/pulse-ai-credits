@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { WorkspaceProvider } from "@/contexts/WorkspaceContext";
+import { ProviderProvider } from "@/contexts/ProviderContext";
 import { Navbar } from "@/components/layout/Navbar";
 import Index from "./pages/Index";
 import Workspace from "./pages/Workspace";
@@ -23,6 +24,7 @@ const App = () => {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <WorkspaceProvider>
+          <ProviderProvider>
           <BrowserRouter>
             <div className="min-h-screen bg-canvas">
               {!isChatMode && <Navbar />}
@@ -43,6 +45,7 @@ const App = () => {
               </Routes>
             </div>
           </BrowserRouter>
+          </ProviderProvider>
         </WorkspaceProvider>
         <Toaster />
         <Sonner />

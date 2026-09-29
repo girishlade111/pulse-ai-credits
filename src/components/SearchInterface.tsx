@@ -35,7 +35,8 @@ import { ChatSidebar } from "@/components/chat/chat-sidebar";
 import { ChatTurn } from "@/components/chat/chat-turn";
 import { ChatWelcome } from "@/components/chat/chat-welcome";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
-import { ApinexError, streamCompletion, type ApinexMessage, type ApinexRequestType } from "@/lib/apinex";
+import { useProvider } from "@/contexts/ProviderContext";
+import { LlmError, streamCompletion, type LlmMessage, type LlmRequestType } from "@/lib/llm";
 import { DEFAULT_MODE_ID, getMode, getModeCost } from "@/lib/chat-modes";
 import {
   MAX_FILES,
@@ -106,6 +107,7 @@ const transcriptToText = (prompt: string, reply: string, requestType: string): s
 
 export const SearchInterface: React.FC<SearchInterfaceProps> = ({ onResultsChange }) => {
   const { credits, subscription, spend } = useWorkspace();
+  const { provider } = useProvider();
   const navigate = useNavigate();
   const store = useChatSessions();
 
@@ -252,7 +254,7 @@ export const SearchInterface: React.FC<SearchInterfaceProps> = ({ onResultsChang
       // Replay the thread so follow-up prompts resolve against earlier turns,
       // then append this prompt with any attachment context folded in.
       const keep = typeof truncateAt === "number" ? priorTurns.slice(0, truncateAt) : priorTurns;
-      const history: ApinexMessage[] = [
+      const history: LlmMessage[] = [
         ...keep.map((message) => ({
           role: message.role === "user" ? ("user" as const) : ("assistant" as const),
           content: message.text,
@@ -268,8 +270,9 @@ export const SearchInterface: React.FC<SearchInterfaceProps> = ({ onResultsChang
 
       try {
         await streamCompletion({
+          provider,
           messages: history,
-          requestType: requestType as ApinexRequestType,
+          requestType: requestType as LlmRequestType,
           signal: controller.signal,
           onDelta: (text) => {
             streamed = text;
@@ -302,7 +305,7 @@ export const SearchInterface: React.FC<SearchInterfaceProps> = ({ onResultsChang
           });
         } else {
           const message =
-            error instanceof ApinexError
+            error instanceof LlmError
               ? error.message
               : "Something went wrong while generating the reply.";
           storeApi.patchMessage(sessionId, replyId, {
@@ -317,7 +320,7 @@ export const SearchInterface: React.FC<SearchInterfaceProps> = ({ onResultsChang
         setBusy(false);
       }
     },
-    [setChatMode, spend]
+    [setChatMode, spend, provider]
   );
 
   const send = React.useCallback(
