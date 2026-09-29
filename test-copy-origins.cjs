@@ -70,6 +70,13 @@ const run = async (browser, origin, label) => {
   }));
   check(`${label}: clipboard API availability`, true, JSON.stringify(secure));
 
+  // Only the secure origin uses the async clipboard path, and verifying it
+  // needs read permission. The LAN origin deliberately has none, which is what
+  // makes the fallback the only path there.
+  if (secure.hasClipboard) {
+    await page.context().grantPermissions(["clipboard-read", "clipboard-write"], { origin });
+  }
+
   const composer = page.locator("textarea[aria-label='Message Pulse agent']");
   await composer.fill("Show a snippet.");
   await composer.press("Enter");
