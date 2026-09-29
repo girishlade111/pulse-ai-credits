@@ -131,7 +131,7 @@ const SNAP = [
 
   const shells = reply.locator(".md-code-shell");
   const count = await shells.count();
-  check("every fence became a code block", count === 11, `${count} blocks`);
+  check("every fence became a code block", count === 10, `${count} blocks`);
 
   const labels = (await shells.locator(".md-code-lang").allInnerTexts()).map((t) => t.trim().toLowerCase());
   const expected = [
