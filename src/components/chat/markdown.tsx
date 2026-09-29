@@ -148,24 +148,29 @@ const normalizeLanguage = (raw?: string): string | undefined => {
  */
 const detectLanguage = (code: string): string => {
   const first = code.split("\n").find((line) => line.trim())?.trim() ?? "";
+  const cssOpen = /^[.#@:*a-z-][^{};]*\{\s*$|^@(media|import|font-face|keyframes)\b/i;
 
-  if (/^<!doctype html|^<html\b|^<\/?(div|section|main|header|footer|nav|body|head|span|p|ul|li|form|table)\b/i.test(first)) {
+  if (/^<!doctype html|^<html\b|^<\/?(div|section|main|header|footer|nav|body|head|span|p|ul|li|form|table|svg)\b/i.test(first)) {
     return "html";
   }
-  if (/^[.#@:*a-z-][^{};]*\{\s*$|^@(media|import|font-face|keyframes)\b/i.test(first)) return "css";
+  if (cssOpen.test(first)) return "css";
   if (/^(def|class)\s+[A-Za-z_]\w*|^(from|import)\s+[A-Za-z_][\w.]*\s*(import|$)|^#!.*\bpython/.test(first)) {
     return "python";
   }
-  if (/^(const|let|var|function|class|async|export|import|require|interface|type)\b/.test(first)) {
-    return "typescript";
-  }
-  if (/^[.#@:*a-z-][^{};]*\{\s*$|^@(media|import|font-face|keyframes)\b/i.test(first)) return "css";
-  if (/^\s*[{[]/.test(first) && /^\s*[{[][\s\S]*[}\]]\s*$/.test(code.trim())) return "json";
   if (/^(SELECT|INSERT|UPDATE|DELETE|WITH|CREATE\s+TABLE|ALTER)\b/i.test(first)) return "sql";
   if (/^(#!\/|\$ |npm |yarn |pnpm |git |docker |curl |cd |mkdir |chmod |apt |pip |export )/m.test(code)) {
     return "bash";
   }
-  if (/^(<svg\b)/i.test(first)) return "html";
+  if (/^\s*[{[]/.test(first) && /^\s*[{[][\s\S]*[}\]]\s*$/.test(code.trim())) return "json";
+
+  if (/^(const|let|var|function|class|async|export|import|require|interface)\b/.test(first)) {
+    // JS and TS are near-indistinguishable without a tag. Default to the far
+    // more common one, and only claim TypeScript on an explicit annotation.
+    const annotated = /:\s*(string|number|boolean|void|unknown|any|Promise<|\w+\[\])/.test(
+      code
+    );
+    return annotated ? "typescript" : "javascript";
+  }
 
   return "text";
 };
