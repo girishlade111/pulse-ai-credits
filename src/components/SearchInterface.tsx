@@ -22,19 +22,11 @@ import React from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { ChatComposer } from "@/components/chat/chat-composer";
 import { ChatScrollArea } from "@/components/chat/chat-scroll-area";
 import { ChatSidebar } from "@/components/chat/chat-sidebar";
 import { ChatTurn } from "@/components/chat/chat-turn";
 import { ChatWelcome } from "@/components/chat/chat-welcome";
-import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { useProvider } from "@/contexts/ProviderContext";
 import { LlmError, streamCompletion, type LlmRequestType, type TurnRecord } from "@/lib/llm";
 import { DEFAULT_MODE_ID, getMode, getModeCost } from "@/lib/chat-modes";
@@ -97,7 +89,6 @@ const pairTurns = (messages: ChatMessage[]): TurnRecord[] => {
 };
 
 export const SearchInterface: React.FC<SearchInterfaceProps> = ({ onResultsChange }) => {
-  const { credits, subscription, spend } = useWorkspace();
   const { provider } = useProvider();
   const navigate = useNavigate();
   const store = useChatSessions();
@@ -112,8 +103,6 @@ export const SearchInterface: React.FC<SearchInterfaceProps> = ({ onResultsChang
   const [sidebarWidth, setSidebarWidth] = React.useState(readSidebarWidth);
   const [dragActive, setDragActive] = React.useState(false);
   const [copied, setCopied] = React.useState<Set<string>>(new Set());
-  const [showUpgrade, setShowUpgrade] = React.useState(false);
-  const [showTopup, setShowTopup] = React.useState(false);
   const [focusToken, setFocusToken] = React.useState(0);
 
   // One place to enter the chat, so the persisted "user is in a chat" flag and
@@ -277,28 +266,17 @@ export const SearchInterface: React.FC<SearchInterfaceProps> = ({ onResultsChang
           },
         });
 
-        storeApi.patchMessage(sessionId, replyId, {
-          status: "complete",
-          creditsUsed: cost,
-        });
-
-        // Charged only after the provider returns, so a failed run is free.
-        spend({
-          amount: cost,
-          request_type: getMode(requestType).ledgerType,
-          description: `${requestType.replace(/_/g, " ")}: ${prompt.slice(0, 50)}`,
-        });
+        storeApi.patchMessage(sessionId, replyId, { status: "complete" });
       } catch (error) {
         const aborted = error instanceof Error && error.name === "AbortError";
 
         if (aborted) {
-          // Keep the partial answer; charge nothing for a stopped run.
+          // Keep whatever arrived; a stopped turn is not a failure.
           storeApi.patchMessage(sessionId, replyId, {
             status: "complete",
-            creditsUsed: streamed.trim() ? 0 : undefined,
             text: streamed.trim()
-              ? `${streamed}\n\n---\n_Stopped. No credits were charged._`
-              : "_Stopped before the agent produced an answer. No credits were charged._",
+              ? `${streamed}\n\n---\n_Stopped._`
+              : "_Stopped before the agent produced an answer._",
           });
         } else {
           const message =
@@ -317,7 +295,7 @@ export const SearchInterface: React.FC<SearchInterfaceProps> = ({ onResultsChang
         setBusy(false);
       }
     },
-    [setChatMode, spend, provider]
+    [setChatMode, provider]
   );
 
   const send = React.useCallback(
@@ -332,33 +310,19 @@ export const SearchInterface: React.FC<SearchInterfaceProps> = ({ onResultsChang
         return;
       }
 
-      const cost = getModeCost(request.requestType);
-
-      if (getMode(request.requestType).premium && subscription.plan_type !== "business") {
-        toast.error(
-          `${getMode(request.requestType).name} is a Business plan tool. Upgrade to unlock it.`
-        );
-        return;
-      }
-
-      if (credits.current_credits < cost) {
-        if (subscription.plan_type === "free") setShowUpgrade(true);
-        else setShowTopup(true);
-        return;
-      }
-
+      // Every tool is available to every user — there is no balance to check
+      // and no plan to be on.
       setInput("");
       /*
        * Deliberately NOT revoked here. The prompt keeps these same object URLs
        * for its transcript thumbnail, so releasing them on send left every
-       * image preview in the chat pointing at a dead blob. They are released
-       * when the attachment is removed, or when the composer unmounts.
+       * image preview in the chat pointing at a dead blob.
        */
       setAttachments([]);
 
       await runRequest(request);
     },
-    [busy, credits.current_credits, runRequest, subscription.plan_type]
+    [busy, runRequest]
   );
 
   const handleSubmit = React.useCallback(() => {
@@ -713,8 +677,6 @@ export const SearchInterface: React.FC<SearchInterfaceProps> = ({ onResultsChang
           History
         </button>
       )}
-
-      {creditDialogs}
     </>
   );
 };
