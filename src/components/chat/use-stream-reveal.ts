@@ -31,8 +31,14 @@ const BASE_RATE = 0.55;
  * under a second behind instead of leaving a jump at the end of the reply.
  */
 const CATCHUP_MS = 500;
-/** A reply this long or longer plays out at full reading pace. */
+/** A reply this long takes at least MIN_REVEAL_MS to play out. */
 const MIN_REVEAL_MS = 400;
+/**
+ * Shorter than this and the effect is not worth showing: advancing the minimum
+ * one character per frame would render "Paris." in a few frames, which reads as
+ * a flicker rather than as writing.
+ */
+const MIN_ANIMATED_CHARS = 90;
 
 const prefersReducedMotion = (): boolean =>
   typeof window !== "undefined" &&
