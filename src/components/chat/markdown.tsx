@@ -149,22 +149,23 @@ const normalizeLanguage = (raw?: string): string | undefined => {
 const detectLanguage = (code: string): string => {
   const first = code.split("\n").find((line) => line.trim())?.trim() ?? "";
 
-  if (/^<!doctype html|^<html\b|^<\/?(div|section|main|header|footer|nav|body|head|span|p|ul|li)\b/i.test(first)) {
+  if (/^<!doctype html|^<html\b|^<\/?(div|section|main|header|footer|nav|body|head|span|p|ul|li|form|table)\b/i.test(first)) {
     return "html";
   }
-  if (/^[.#@:*a-z-][^{};]*\{\s*$|^@(media|import|font-face)\b/i.test(first)) return "css";
-  if (/^(def|class)\s+\w+|^\s*(from|import)\s+\w+|^\s*print\(|:\s*$/m.test(first) && /^[ \t]*[a-z_]+\s*:/m.test(code)) {
+  if (/^[.#@:*a-z-][^{};]*\{\s*$|^@(media|import|font-face|keyframes)\b/i.test(first)) return "css";
+  if (/^(def|class)\s+[A-Za-z_]\w*|^(from|import)\s+[A-Za-z_][\w.]*\s*(import|$)|^#!.*\bpython/.test(first)) {
     return "python";
   }
-  if (/^(const|let|var|function|class|async|export|import|require)\b|=>|console\.log/.test(first)) {
-    return "javascript";
+  if (/^(const|let|var|function|class|async|export|import|require|interface|type)\b/.test(first)) {
+    return "typescript";
   }
+  if (/^[.#@:*a-z-][^{};]*\{\s*$|^@(media|import|font-face|keyframes)\b/i.test(first)) return "css";
   if (/^\s*[{[]/.test(first) && /^\s*[{[][\s\S]*[}\]]\s*$/.test(code.trim())) return "json";
-  if (/^(#!\/|\$ |npm |yarn |pnpm |git |docker |curl |cd |mkdir |chmod |apt |pip )/m.test(code)) {
+  if (/^(SELECT|INSERT|UPDATE|DELETE|WITH|CREATE\s+TABLE|ALTER)\b/i.test(first)) return "sql";
+  if (/^(#!\/|\$ |npm |yarn |pnpm |git |docker |curl |cd |mkdir |chmod |apt |pip |export )/m.test(code)) {
     return "bash";
   }
-  if (/^(SELECT|INSERT|UPDATE|DELETE|CREATE TABLE|ALTER)\b/i.test(first)) return "sql";
-  if (/^[a-z_]+:\s*\S|^-\s+\S/m.test(first) && !/[{};]/.test(code)) return "yaml";
+  if (/^(<svg\b)/i.test(first)) return "html";
 
   return "text";
 };
