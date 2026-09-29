@@ -305,18 +305,26 @@ export const ChatComposer: React.FC<ChatComposerProps> = ({
                     {attachment.name}
                   </p>
                   <p className="caption truncate text-muted">
-                    {fileTypeLabel(attachment)} · {formatFileSize(attachment.size)}
+                    {attachment.reading
+                      ? "Reading…"
+                      : attachment.error
+                        ? attachment.error
+                        : `${fileTypeLabel(attachment)} · ${formatFileSize(attachment.size)}`}
                   </p>
                 </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => onRemoveAttachment(attachment.id)}
-                  aria-label={`Remove ${attachment.name}`}
-                  className="h-7 w-7 opacity-0 transition-opacity focus-visible:opacity-100 group-hover:opacity-100"
-                >
-                  <X className="h-3.5 w-3.5" />
-                </Button>
+                {attachment.reading ? (
+                  <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin text-muted" />
+                ) : (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => onRemoveAttachment(attachment.id)}
+                    aria-label={`Remove ${attachment.name}`}
+                    className="h-7 w-7 opacity-0 transition-opacity focus-visible:opacity-100 group-hover:opacity-100"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </Button>
+                )}
               </div>
             ))}
           </div>

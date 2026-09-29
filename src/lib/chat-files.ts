@@ -164,6 +164,7 @@ export const fileToAttachment = async (file: File): Promise<ChatAttachment> => {
     } catch {
       attachment.error = "Could not read the image.";
     }
+    attachment.reading = false;
     return attachment;
   }
 
@@ -173,11 +174,13 @@ export const fileToAttachment = async (file: File): Promise<ChatAttachment> => {
     } catch {
       attachment.error = "This PDF could not be read in the browser.";
     }
+    attachment.reading = false;
     return attachment;
   }
 
   if (RICH_DOC.test(file.name)) {
     attachment.error = "Office documents cannot be parsed in the browser yet.";
+    attachment.reading = false;
     return attachment;
   }
 
@@ -189,6 +192,7 @@ export const fileToAttachment = async (file: File): Promise<ChatAttachment> => {
     }
   }
 
+  attachment.reading = false;
   return attachment;
 };
 
