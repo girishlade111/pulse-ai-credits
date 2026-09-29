@@ -234,6 +234,13 @@ const REPLY = [
   check("pdf has content streams", (pdfStr.match(/\/Length \d+ >>\s*stream/g) || []).length >= 1, "");
 
   /* ============================== estimates fallback ============================== */
+  console.log("\n  network failures seen:");
+  [...new Set(failedRequests)].forEach((f) => console.log(`    ${f}`));
+  check(
+    "no failed network requests",
+    failedRequests.length === 0,
+    [...new Set(failedRequests)].slice(0, 3).join(" | ")
+  );
   check("no page errors", errors.length === 0, errors.slice(0, 3).join(" | "));
 
   await page.screenshot({ path: `${TMP}/shots/f-01-final.png` });
