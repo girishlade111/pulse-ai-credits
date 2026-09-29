@@ -456,11 +456,33 @@ export const SearchInterface: React.FC<SearchInterfaceProps> = ({ onResultsChang
         toast.error(`${file.name}: ${problem}`);
         continue;
       }
+
+      /*
+       * Show the file straight away, then fill in what could be read. Parsing a
+       * PDF fetches pdf.js and walks the pages, so waiting for it before adding
+       * the card left the composer looking like it had ignored the file.
+       */
+      const id = `att_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+      const placeholder: ChatAttachment = {
+        id,
+        name: file.name,
+        type: file.type || "application/octet-stream",
+        size: file.size,
+        url: file.type.startsWith("image/") ? URL.createObjectURL(file) : undefined,
+        reading: true,
+      };
+      setAttachments((prev) => [...prev, placeholder]);
+      added += 1;
+
       try {
-        const attachment = await fileToAttachment(file);
-        setAttachments((prev) => [...prev, attachment]);
-        added += 1;
+        const parsed = await fileToAttachment(file, id);
+        setAttachments((prev) => prev.map((item) => (item.id === id ? parsed : item)));
       } catch {
+        setAttachments((prev) =>
+          prev.map((item) =>
+            item.id === id ? { ...item, reading: false, error: "Could not read the file." } : item
+          )
+        );
         toast.error(`Could not read ${file.name}.`);
       }
     }
