@@ -73,10 +73,8 @@ const sendJson = (res: ServerResponse, status: number, body: unknown) => {
 const llmProxy = (providers: Record<ProviderId, ProviderEntry>): Plugin => ({
   name: "pulse-llm-proxy",
   configureServer(server) {
-    server.middlewares.use(`${LLM_PROXY_PREFIX}/:provider/chat/completions`, async (req, res) => {
-      const { provider } = (
-        req as IncomingMessage & { params?: Record<string, string> }
-      ).params ?? {};
+    server.middlewares.use(LLM_PROXY_PREFIX, async (req, res) => {
+      const provider = matchProvider(req.url);
 
       // Only the providers above are reachable. This must not become an open proxy.
       if (!provider || !isProviderId(provider)) {
