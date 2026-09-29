@@ -36,15 +36,16 @@ import { ChatTurn } from "@/components/chat/chat-turn";
 import { ChatWelcome } from "@/components/chat/chat-welcome";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { useProvider } from "@/contexts/ProviderContext";
-import { LlmError, streamCompletion, type LlmMessage, type LlmRequestType } from "@/lib/llm";
+import { LlmError, streamCompletion, type LlmRequestType, type TurnRecord } from "@/lib/llm";
 import { DEFAULT_MODE_ID, getMode, getModeCost } from "@/lib/chat-modes";
 import {
   MAX_FILES,
-  buildAttachmentContext,
+  buildAttachmentContent,
   fileToAttachment,
   revokeAttachments,
   validateFile,
 } from "@/lib/chat-files";
+import { downloadExport, type ExportFormat } from "@/lib/chat-export";
 import {
   clampSidebarWidth,
   readChatView,
@@ -74,35 +75,24 @@ interface SendRequest {
   truncateAt?: number;
 }
 
-const EXPORT_MAX = 200_000;
-
-const transcriptToText = (prompt: string, reply: string, requestType: string): string => {
-  const body = reply
-    .replace(/^# (.*)$/gm, (_m, title: string) => `${"=".repeat(50)}\n${title}\n${"=".repeat(50)}`)
-    .replace(/^## (.*)$/gm, (_m, title: string) => `\n${title.toUpperCase()}\n${"-".repeat(title.length)}`)
-    .replace(/^• (.*)$/gm, "  • $1")
-    .replace(/\*\*(.*?)\*\*/g, "$1");
-
-  return [
-    "PULSE AI — CONVERSATION EXPORT",
-    "=".repeat(50),
-    "",
-    `Tool: ${requestType.replace(/_/g, " ")}`,
-    `Generated: ${new Date().toLocaleString()}`,
-    "",
-    "=".repeat(50),
-    "PROMPT",
-    "=".repeat(50),
-    prompt,
-    "",
-    "=".repeat(50),
-    "REPLY",
-    "=".repeat(50),
-    body.slice(0, EXPORT_MAX),
-    "",
-    "=".repeat(50),
-    "Exported from Pulse AI",
-  ].join("\n");
+/**
+ * Pairs the flat stored transcript into turns for the model.
+ *
+ * A turn whose reply never arrived keeps its prompt and has no assistant half,
+ * which is how the client can tell "unanswered" from "answered" and repair the
+ * alternation instead of emitting two user messages in a row.
+ */
+const pairTurns = (messages: ChatMessage[]): TurnRecord[] => {
+  const turns: TurnRecord[] = [];
+  for (const message of messages) {
+    if (message.role === "user") {
+      turns.push({ user: { role: "user", content: message.text } });
+    } else {
+      const last = turns[turns.length - 1];
+      if (last && !last.assistant) last.assistant = { role: "assistant", content: message.text };
+    }
+  }
+  return turns;
 };
 
 export const SearchInterface: React.FC<SearchInterfaceProps> = ({ onResultsChange }) => {
@@ -209,9 +199,7 @@ export const SearchInterface: React.FC<SearchInterfaceProps> = ({ onResultsChang
        * function yields, so reading the store afterwards would miss the prompt
        * entirely and send the model an empty conversation.
        */
-      const priorTurns = (storeApi.active?.messages ?? []).filter(
-        (message) => message.status !== "error"
-      );
+      const priorMessages = storeApi.active?.messages ?? [];
       if (typeof truncateAt === "number") {
         // Regenerating turn N: everything from N onward is replaced.
         storeApi.removeMessagesFrom(storeApi.activeId!, truncateAt);
@@ -226,9 +214,16 @@ export const SearchInterface: React.FC<SearchInterfaceProps> = ({ onResultsChang
         createdAt: new Date().toISOString(),
         status: "complete",
         requestType: requestType as ChatMessage["requestType"],
-        // Content is not persisted: a pasted file would bloat localStorage.
+        // The data URI is not persisted: a screenshot would blow storage.
         attachments: files.length
-          ? files.map(({ id, name, type, size, url }) => ({ id, name, type, size, url }))
+          ? files.map(({ id, name, type, size, url, error }) => ({
+              id,
+              name,
+              type,
+              size,
+              url,
+              error,
+            }))
           : undefined,
       };
 
@@ -251,17 +246,21 @@ export const SearchInterface: React.FC<SearchInterfaceProps> = ({ onResultsChang
       const controller = new AbortController();
       abortRef.current = controller;
 
-      // Replay the thread so follow-up prompts resolve against earlier turns,
-      // then append this prompt with any attachment context folded in.
-      const keep = typeof truncateAt === "number" ? priorTurns.slice(0, truncateAt) : priorTurns;
-      const history: LlmMessage[] = [
-        ...keep.map((message) => ({
-          role: message.role === "user" ? ("user" as const) : ("assistant" as const),
-          content: message.text,
-        })),
+      /*
+       * The stored transcript is paired into turns and handed over as-is. The
+       * client repairs the alternation: a prompt whose reply failed is merged
+       * into the next one, instead of leaving two user messages in a row for
+       * the model to answer whichever it likes.
+       */
+      const kept = typeof truncateAt === "number" ? priorMessages.slice(0, truncateAt) : priorMessages;
+      const turns: TurnRecord[] = [
+        ...pairTurns(kept),
         {
-          role: "user" as const,
-          content: [prompt, buildAttachmentContext(files)].filter(Boolean).join("\n"),
+          // Images ride along as vision parts, so the model actually sees them.
+          user: {
+            role: "user",
+            content: buildAttachmentContent(prompt, files),
+          },
         },
       ];
 
@@ -271,9 +270,10 @@ export const SearchInterface: React.FC<SearchInterfaceProps> = ({ onResultsChang
       try {
         await streamCompletion({
           provider,
-          messages: history,
+          turns,
           requestType: requestType as LlmRequestType,
           signal: controller.signal,
+          onUsage: (usage) => storeApi.patchMessage(sessionId, replyId, { tokens: usage }),
           onDelta: (text) => {
             streamed = text;
             storeApi.patchMessage(sessionId, replyId, { text, status: "streaming" });
@@ -419,20 +419,24 @@ export const SearchInterface: React.FC<SearchInterfaceProps> = ({ onResultsChang
     }
   }, []);
 
-  const exportTurn = React.useCallback((prompt: ChatMessage, reply?: ChatMessage) => {
-    if (!reply?.text) return;
-    const blob = new Blob([transcriptToText(prompt.text, reply.text, reply.requestType ?? "chat")], {
-      type: "text/plain;charset=utf-8",
-    });
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.download = `pulse-chat-${prompt.text.slice(0, 30).replace(/[^a-z0-9]+/gi, "-") || "export"}.txt`;
-    document.body.appendChild(anchor);
-    anchor.click();
-    document.body.removeChild(anchor);
-    URL.revokeObjectURL(url);
-  }, []);
+  /** Exports the whole chat, not just the turn whose menu was opened. */
+  const exportChat = React.useCallback(
+    (format: ExportFormat) => {
+      const pairs = turns
+        .filter((turn) => turn.prompt.text.trim())
+        .map((turn) => ({ prompt: turn.prompt, reply: turn.reply }));
+      if (!pairs.length) {
+        toast.error("Nothing to export yet.");
+        return;
+      }
+      if (downloadExport(format, pairs)) {
+        toast.success(`Exported ${format.toUpperCase()}`);
+      } else {
+        toast.error("The download was blocked by the browser.");
+      }
+    },
+    [turns]
+  );
 
   /* -------------------------------------------------------------- attachments */
 

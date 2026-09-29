@@ -56,6 +56,14 @@ export interface ChatMessage {
   error?: string;
   /** Local-only thumbs up / down. */
   feedback?: "up" | "down";
+  /** Token usage for this reply, when the gateway reports it. */
+  tokens?: ChatTokens;
+}
+
+export interface ChatTokens {
+  promptTokens?: number;
+  completionTokens?: number;
+  totalTokens?: number;
 }
 
 export interface ChatSession {

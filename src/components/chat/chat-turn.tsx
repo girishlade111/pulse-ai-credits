@@ -12,16 +12,21 @@ import { Button } from "@/components/ui/button";
 import { TimelinePill } from "@/components/TimelinePill";
 import { Markdown } from "./markdown";
 import { useStreamReveal } from "./use-stream-reveal";
+import { EXPORT_FORMATS, type ExportFormat } from "@/lib/chat-export";
+import { estimateTokens } from "@/lib/llm";
 import { getMode } from "@/lib/chat-modes";
 import { fileTypeLabel, formatFileSize, isImage } from "@/lib/chat-files";
+import type { ChatTokens } from "@/lib/chat-types";
 import { cn } from "@/lib/utils";
 import {
   AlertTriangle,
   Check,
+  ChevronDown,
   ChevronsDown,
   Copy,
   Download,
   FileText,
+  Gauge,
   Loader2,
   Pencil,
   RotateCcw,
@@ -183,44 +188,45 @@ export const ChatTurn: React.FC<ChatTurnProps> = ({
               )}
 
               {!streaming && (
-                <div className="mt-5 flex flex-wrap items-center justify-end gap-1 border-t border-hairline pt-3">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={onRegenerate}
-                    disabled={busy}
-                    title="Run this prompt again"
-                  >
-                    <RotateCcw />
-                    Regenerate
-                  </Button>
-                  <Button variant="ghost" size="sm" onClick={onCopy}>
-                    {copied ? (
-                      <>
-                        <Check className="text-success" />
-                        Copied
-                      </>
-                    ) : (
-                      <>
-                        <Copy />
-                        Copy
-                      </>
-                    )}
-                  </Button>
-                  <Button variant="ghost" size="sm" onClick={onExport} title="Download as .txt">
-                    <Download />
-                    Export
-                  </Button>
-                  <span className="ml-1 flex items-center gap-0.5">
+                <div className="mt-5 flex flex-wrap items-center justify-between gap-2 border-t border-hairline pt-3">
+                  {/* Left: what this run cost, in tokens. */}
+                  <TokenStat liveText={reply.text} tokens={reply.tokens} />
+
+                  <div className="flex flex-wrap items-center justify-end gap-1">
                     <Button
                       variant="ghost"
-                      size="icon"
-                      className="h-8 w-8"
-                      onClick={() => onFeedback(reply.feedback === "up" ? undefined : "up")}
-                      aria-label="Helpful"
-                      aria-pressed={reply.feedback === "up"}
-                      title="Helpful"
+                      size="sm"
+                      onClick={onRegenerate}
+                      disabled={busy}
+                      title="Run this prompt again"
                     >
+                      <RotateCcw />
+                      Regenerate
+                    </Button>
+                    <Button variant="ghost" size="sm" onClick={onCopy}>
+                      {copied ? (
+                        <>
+                          <Check className="text-success" />
+                          Copied
+                        </>
+                      ) : (
+                        <>
+                          <Copy />
+                          Copy
+                        </>
+                      )}
+                    </Button>
+                    <ExportMenu onExport={onExport} />
+                    <span className="ml-1 flex items-center gap-0.5">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => onFeedback(reply.feedback === "up" ? undefined : "up")}
+                        aria-label="Helpful"
+                        aria-pressed={reply.feedback === "up"}
+                        title="Helpful"
+                      >
                       <ThumbsUp
                         className={cn(reply.feedback === "up" && "text-success")}
                       />
@@ -258,29 +264,126 @@ export const ChatTurn: React.FC<ChatTurnProps> = ({
  * Only this subtree re-renders.
  */
 const ReplyBody: React.FC<{ text: string; streaming: boolean }> = ({ text, streaming }) => {
-  const revealed = useStreamReveal(text, streaming);
+  const { revealed, done } = useStreamReveal(text, streaming);
   const [dismissed, setDismissed] = React.useState(false);
 
   // A new run resets the "skip" affordance.
   React.useEffect(() => setDismissed(false), [text]);
 
   const shown = dismissed ? text : revealed;
-  const lagging = streaming && shown.length < text.length;
+  const lagging = !done && shown.length < text.length;
 
   return (
     <>
-      <Markdown content={shown} className={cn(streaming && "md-streaming")} />
+      <Markdown
+        content={shown}
+        className={cn((streaming || lagging) && "md-streaming")}
+      />
       {lagging && (
-        <button
-          type="button"
-          onClick={() => setDismissed(true)}
-          className="md-skip"
-        >
+        <button type="button" onClick={() => setDismissed(true)} className="md-skip">
           <ChevronsDown aria-hidden />
           Show the rest
         </button>
       )}
     </>
+  );
+};
+
+/**
+ * Token count for a run.
+ *
+ * Prefers the provider's own usage figure. While the text is still arriving it
+ * ticks up from a local estimate so the number is visibly live; once the run is
+ * finished it settles on the reported count when the gateway sent one.
+ */
+const TokenStat: React.FC<{ liveText: string; tokens?: ChatTokens }> = ({
+  liveText,
+  tokens,
+}) => {
+  const reported = tokens?.completionTokens;
+  const shown = reported ?? estimateTokens(liveText);
+  const source = reported ? "reported" : "estimated";
+
+  return (
+    <span
+      className="caption flex items-center gap-1.5 text-muted-soft"
+      title={
+        reported
+          ? `${shown} tokens in this reply, as reported by the provider`
+          : `${shown} tokens, estimated from the reply length`
+      }
+    >
+      <Gauge aria-hidden />
+      <span aria-live="polite">{shown.toLocaleString()}</span>
+      <span>{shown === 1 ? "token" : "tokens"}</span>
+      {!reported && <span className="caption-upper">est.</span>}
+      {source === "reported" && <span className="sr-only">reported by the provider</span>}
+    </span>
+  );
+};
+
+/** Four formats, chosen from a menu rather than four buttons in the row. */
+const ExportMenu: React.FC<{ onExport: (format: ExportFormat) => void }> = ({
+  onExport,
+}) => {
+  const [open, setOpen] = React.useState(false);
+  const ref = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    if (!open) return;
+    const onDown = (event: MouseEvent) => {
+      if (!ref.current?.contains(event.target as Node)) setOpen(false);
+    };
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
+  return (
+    <div ref={ref} className="relative">
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={() => setOpen((value) => !value)}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        title="Download this chat"
+      >
+        <Download />
+        Export
+        <ChevronDown aria-hidden />
+      </Button>
+
+      {open && (
+        <div
+          role="menu"
+          aria-label="Export format"
+          className="absolute bottom-full right-0 z-30 mb-1 w-44 overflow-hidden rounded-md border border-hairline bg-popover p-1 shadow-sm"
+        >
+          {EXPORT_FORMATS.map((format) => (
+            <button
+              key={format.id}
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                setOpen(false);
+                onExport(format.id);
+              }}
+              className="flex w-full items-center gap-2 rounded px-2.5 py-1.5 text-left text-sm transition-colors hover:bg-canvas-soft"
+            >
+              <span className="min-w-0 flex-1 truncate">{format.label}</span>
+              <span className="caption-upper text-muted-soft">.{format.extension}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
   );
 };
 
