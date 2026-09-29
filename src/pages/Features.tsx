@@ -291,7 +291,7 @@ const Features: React.FC = () => {
                   <p className="section-label mb-3">Standard</p>
                   <h3 className="display-sm">Deep Research</h3>
                   <p className="body-sm mt-2 text-muted">
-                    Synchronous .{1,3} 30 seconds to a minute
+                    Synchronous · 30 seconds to a minute
                   </p>
                   <ul className="mt-6 space-y-2.5">
                     {[
@@ -309,7 +309,7 @@ const Features: React.FC = () => {
                   <p className="section-label mb-3">Business</p>
                   <h3 className="display-sm">8x Deep Research</h3>
                   <p className="body-sm mt-2 text-muted">
-                    Asynchronous .{1,3} 4 to 30 minutes
+                    Asynchronous · 4 to 30 minutes
                   </p>
                   <ul className="mt-6 space-y-2.5">
                     {[
