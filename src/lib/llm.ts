@@ -180,7 +180,7 @@ const buildRequestBody = (
   messages: [
     {
       role: "system",
-      content: `${SYSTEM_PROMPT[options.requestType]}${CONVERSATION_RULES}`,
+      content: `${SYSTEM_PROMPT[options.requestType]}${CODE_FORMAT_RULES}${CONVERSATION_RULES}`,
     },
     ...boundHistory(options.messages),
   ],

@@ -98,7 +98,76 @@ const HEADING_CLASS: Record<number, string> = {
   6: "md-h6",
 };
 
-const FENCE = /^\s*```\s*([\w+-]*)\s*$/;
+const FENCE = /^\s*```\s*([\w+#.-]*)\s*$/;
+
+/**
+ * Canonical names, so the same language always carries the same label whether
+ * the model wrote `js`, `JS`, `JavaScript` or `javascript`.
+ */
+const LANGUAGE_ALIASES: Record<string, string> = {
+  js: "javascript",
+  jsx: "javascript",
+  mjs: "javascript",
+  cjs: "javascript",
+  node: "javascript",
+  ts: "typescript",
+  tsx: "typescript",
+  py: "python",
+  python3: "python",
+  rb: "ruby",
+  sh: "bash",
+  shell: "bash",
+  zsh: "bash",
+  console: "bash",
+  yml: "yaml",
+  md: "markdown",
+  txt: "text",
+  plain: "text",
+  text: "text",
+  "c++": "cpp",
+  cs: "csharp",
+  htm: "html",
+  golang: "go",
+  postgres: "sql",
+  psql: "sql",
+  curl: "bash",
+};
+
+const normalizeLanguage = (raw?: string): string | undefined => {
+  const value = raw?.trim().toLowerCase();
+  if (!value) return undefined;
+  return LANGUAGE_ALIASES[value] ?? value;
+};
+
+/**
+ * Last-resort tag for a fence the model opened without one.
+ *
+ * Only high-confidence, low-false-positive signals count — the cost of a wrong
+ * label is a mislabelled block, whereas a missed guess just falls back to
+ * `text`, which is honest.
+ */
+const detectLanguage = (code: string): string => {
+  const first = code.split("\n").find((line) => line.trim())?.trim() ?? "";
+
+  if (/^<!doctype html|^<html\b|^<\/?(div|section|main|header|footer|nav|body|head|span|p|ul|li)\b/i.test(first)) {
+    return "html";
+  }
+  if (/^[.#@:*a-z-][^{};]*\{\s*$|^@(media|import|font-face)\b/i.test(first)) return "css";
+  if (/^(def|class)\s+\w+|^\s*(from|import)\s+\w+|^\s*print\(|:\s*$/m.test(first) && /^[ \t]*[a-z_]+\s*:/m.test(code)) {
+    return "python";
+  }
+  if (/^(const|let|var|function|class|async|export|import|require)\b|=>|console\.log/.test(first)) {
+    return "javascript";
+  }
+  if (/^\s*[{[]/.test(first) && /^\s*[{[][\s\S]*[}\]]\s*$/.test(code.trim())) return "json";
+  if (/^(#!\/|\$ |npm |yarn |pnpm |git |docker |curl |cd |mkdir |chmod |apt |pip )/m.test(code)) {
+    return "bash";
+  }
+  if (/^(SELECT|INSERT|UPDATE|DELETE|CREATE TABLE|ALTER)\b/i.test(first)) return "sql";
+  if (/^[a-z_]+:\s*\S|^-\s+\S/m.test(first) && !/[{};]/.test(code)) return "yaml";
+
+  return "text";
+};
 
 /**
  * A fenced block with its own copy control.
@@ -196,19 +265,21 @@ const renderBlocks = (source: string): React.ReactNode[] => {
     const fence = FENCE.exec(line);
     if (fence) {
       flushParagraph(paragraph);
-      const lang = fence[1];
       const body: string[] = [];
       i += 1;
+      // A fence the model never closes still renders as code to the end, which
+      // beats leaking raw markup into a paragraph.
       while (i < lines.length && !FENCE.test(lines[i])) {
         body.push(lines[i]);
         i += 1;
       }
       i += 1; // closing fence (or EOF)
+      const code = body.join("\n");
       out.push(
         <CodeBlock
           key={`code-${key++}`}
-          language={lang || undefined}
-          code={body.join("\n")}
+          language={normalizeLanguage(fence[1]) ?? detectLanguage(code)}
+          code={code}
         />
       );
       continue;
