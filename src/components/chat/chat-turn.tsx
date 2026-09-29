@@ -11,6 +11,7 @@ import React from "react";
 import { Button } from "@/components/ui/button";
 import { TimelinePill } from "@/components/TimelinePill";
 import { Markdown } from "./markdown";
+import { useStreamReveal } from "./use-stream-reveal";
 import { getMode } from "@/lib/chat-modes";
 import { fileTypeLabel, formatFileSize, isImage } from "@/lib/chat-files";
 import { cn } from "@/lib/utils";
