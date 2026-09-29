@@ -54,11 +54,14 @@ const startOrigin = () =>
 
       // Deliberately uneven: a 4-character dribble, then a 300-char burst, then
       // more dribbling. A naive append lurches on the bursts; the reveal should
-      // not.
+      // not. The segments are contiguous, so the stream is exactly TEXT.
       const plan = [];
-      for (let i = 0; i < TEXT.length; i += 4) plan.push(TEXT.slice(i, i + 4));
-      plan.splice(12, 0, TEXT.slice(48, 348));
-      plan.splice(13, 0, TEXT.slice(348, 500));
+      const head = TEXT.slice(0, 150);
+      const burst = TEXT.slice(150, 450);
+      const tail = TEXT.slice(450);
+      for (let i = 0; i < head.length; i += 4) plan.push(head.slice(i, i + 4));
+      plan.push(burst);
+      for (let i = 0; i < tail.length; i += 4) plan.push(tail.slice(i, i + 4));
 
       let i = 0;
       const push = () => {
@@ -127,15 +130,17 @@ const startApp = () =>
     const reply = page.locator(".bubble-agent").first();
     await reply.waitFor({ state: "visible", timeout: 40000 });
 
-    // Sample painted length against the true stream length, as fast as we can.
+    // Sample painted length against the true stream length. Painted length and
+    // status are read in ONE evaluate — two round-trips can straddle a frame
+    // and report a torn, non-monotonic value.
     const trace = [];
     for (let i = 0; i < 4000; i += 1) {
-      const painted = await reply.evaluate(
-        (el) => (el.querySelector(".md")?.textContent || "").length
-      );
-      const status = await reply.getAttribute("data-chat-status");
-      trace.push({ painted, status, at: Date.now() - t0 });
-      if (status === "complete" && painted >= TEXT.length) break;
+      const snap = await reply.evaluate((el) => ({
+        painted: (el.querySelector(".md")?.textContent || "").length,
+        status: el.dataset.chatStatus,
+      }));
+      trace.push({ ...snap, at: Date.now() - t0 });
+      if (snap.status === "complete" && snap.painted >= TEXT.length) break;
       await sleep(8);
     }
 
@@ -228,7 +233,13 @@ const startApp = () =>
     await page.close();
   } finally {
     await browser.close();
-    app.kill();
+    // `shell: true` means the handle we hold is cmd.exe, and killing it leaves
+    // the Vite node process holding the port. Take down the whole tree.
+    try {
+      require("child_process").execSync(`taskkill /PID ${app.pid} /T /F`, { stdio: "ignore" });
+    } catch {
+      app.kill();
+    }
     origin.close();
   }
 
