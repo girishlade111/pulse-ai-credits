@@ -94,10 +94,25 @@ You cannot retrieve live records, so do not present results as if you had them: 
 };
 
 /**
- * Appended to every mode. Without it the model answers each turn in isolation
- * and follow-up prompts ("make it shorter", "what about caching?") come back
- * as if they were the first message of the session.
+ * Appended to every mode.
+ *
+ * The renderer can only style what is fenced, and a fenced block is the only
+ * thing a reader can copy as a unit. Without this the model cheerfully answers
+ * "here is a function: `def f():`" with the code smeared across a sentence,
+ * which is exactly what the workspace used to serve.
  */
+const CODE_FORMAT_RULES = `
+
+--- Code formatting (mandatory) ---
+Whenever your answer contains code, markup, shell commands, configuration, file contents, a data payload, or anything a reader would want to copy:
+- Put ALL of it inside a fenced code block with a language tag.
+- Never leave code inline in a sentence, and never emit a fenced block without a language tag.
+- Use exactly these tags: html, css, javascript, typescript, python, markdown, json, bash, sql, yaml, diff.
+- For plain prose, logs, ASCII diagrams, or a literal file with no language, use \`text\`.
+- One block per idea. Never split a single snippet across several blocks, and never number them.
+- Fence even a one-liner, so it can be copied as a unit.
+- Outside the fences, write explanation as ordinary prose only.`;
+
 const CONVERSATION_RULES = `
 
 --- Conversation rules ---
