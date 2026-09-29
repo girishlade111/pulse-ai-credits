@@ -540,34 +540,8 @@ export const SearchInterface: React.FC<SearchInterfaceProps> = ({ onResultsChang
   }, [modeId, send]);
 
   /* ------------------------------------------------------------------- render */
-
-  const lowBalance = credits.current_credits < 5;
-  const insufficient = credits.current_credits < mode.credits;
-
-  const composerFooter = insufficient ? (
-    <div className="mt-2 flex items-center justify-center gap-2 rounded-md border border-destructive/40 bg-destructive/5 px-4 py-2">
-      <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-destructive" />
-      <span className="body-sm text-destructive">
-        {mode.name} needs {mode.credits} credit{mode.credits > 1 ? "s" : ""} · you have{" "}
-        {credits.current_credits}
-      </span>
-      <Button
-        variant="ghost"
-        size="sm"
-        className="h-7 text-destructive"
-        onClick={() =>
-          subscription.plan_type === "free" ? setShowUpgrade(true) : setShowTopup(true)
-        }
-      >
-        {subscription.plan_type === "free" ? "Upgrade" : "Top up"}
-      </Button>
-    </div>
-  ) : lowBalance ? (
-    <p className="mt-2.5 text-center caption text-muted-soft">
-      Low balance — {credits.current_credits} credit{credits.current_credits === 1 ? "" : "s"} left
-    </p>
-  ) : undefined;
-
+  /* Runs are free, so the composer has nothing to warn about. */
+  const composerFooter = undefined;
   const transcript = (
     <div
       className={cn(
@@ -658,77 +632,6 @@ export const SearchInterface: React.FC<SearchInterfaceProps> = ({ onResultsChang
     />
   );
 
-  const creditDialogs = (
-    <>
-      <Dialog open={showUpgrade} onOpenChange={setShowUpgrade}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Out of credits</DialogTitle>
-            <DialogDescription>
-              You have used every credit on this account. Upgrade to a paid plan
-              for monthly credits, bonus credits and top-up discounts.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="mt-2 flex flex-col gap-3">
-            <Button
-              onClick={() => {
-                setShowUpgrade(false);
-                navigate("/plans");
-              }}
-            >
-              Upgrade plan
-            </Button>
-            <Button variant="outline" onClick={() => setShowUpgrade(false)}>
-              Maybe later
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={showTopup} onOpenChange={setShowTopup}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Need more credits?</DialogTitle>
-            <DialogDescription>
-              Top up without changing plan. Your plan discount is applied
-              automatically at settlement.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="mt-2 flex flex-col gap-3">
-            <Button
-              onClick={() => {
-                setShowTopup(false);
-                navigate("/plans");
-              }}
-            >
-              Buy credits
-            </Button>
-            <Button variant="outline" onClick={() => setShowTopup(false)}>
-              Not now
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-    </>
-  );
-
-  return (
-    <>
-      {/*
-        The composer lives in the same React position in both branches — only
-        the wrapper classes change. That is deliberate: switching between the
-        landing view and the chat must not unmount the textarea, or the reply
-        lands while the caret is gone.
-      */}
-      <div
-        className={cn(chatMode ? "flex h-full min-h-0 flex-col" : "block w-full")}
-        /*
-         * One source of truth for the panel width. CSS custom properties
-         * inherit down the tree, so the sidebar and the main column both read
-         * this single value and cannot drift out of sync mid-drag.
-         */
-        style={{ "--chat-sidebar-width": `${sidebarWidth}px` } as React.CSSProperties}
-      >
         {chatMode && (
           <ChatSidebar
             store={store}
