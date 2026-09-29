@@ -36,6 +36,22 @@ const prefersReducedMotion = (): boolean =>
   typeof window.matchMedia === "function" &&
   window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
+/**
+ * How many characters to paint this frame.
+ *
+ * Pure and exported so the pacing can be unit-tested without a browser or a
+ * live model — the visual trace only proves it end-to-end, not that a given
+ * backlog is smoothed within a predictable window.
+ *
+ * `backlog` is how far the reveal trails the stream; `elapsedMs` is the time
+ * since the previous frame.
+ */
+export const revealStep = (backlog: number, elapsedMs: number): number => {
+  if (backlog <= 0) return 0;
+  const rate = BASE_RATE + backlog / CATCHUP_MS;
+  return Math.max(1, Math.ceil(rate * elapsedMs));
+};
+
 export const useStreamReveal = (text: string, streaming: boolean): string => {
   const [revealed, setRevealed] = React.useState(text);
   /** Index into `text` currently painted. Kept in a ref: it changes per frame. */
