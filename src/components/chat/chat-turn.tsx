@@ -104,7 +104,6 @@ interface ChatTurnProps {
     text: string;
     status: "complete" | "streaming" | "error";
     requestType?: string;
-    creditsUsed?: number;
     createdAt: string;
     error?: string;
     feedback?: "up" | "down";
@@ -143,11 +142,6 @@ export const ChatTurn: React.FC<ChatTurnProps> = ({
           <div className="mb-2 flex flex-wrap items-center gap-2">
             <ModeIcon className="h-3.5 w-3.5 text-ink" />
             <span className="title-sm">{mode.name}</span>
-            {typeof reply?.creditsUsed === "number" && (
-              <span className="pill-badge">
-                {reply.creditsUsed} credit{reply.creditsUsed > 1 ? "s" : ""}
-              </span>
-            )}
             <span className="caption text-muted-soft">{formatTime(queryAt)}</span>
           </div>
           <p className="body-md whitespace-pre-wrap break-words">{query}</p>
@@ -194,9 +188,6 @@ export const ChatTurn: React.FC<ChatTurnProps> = ({
                 <div className="min-w-0 flex-1">
                   <p className="title-sm text-destructive">This run failed</p>
                   <p className="body-sm mt-1 break-words text-muted">{reply.error}</p>
-                  <p className="caption mt-2 text-muted-soft">
-                    No credits were charged for a failed run.
-                  </p>
                 </div>
               </div>
               <div className="mt-4 flex justify-end border-t border-hairline pt-3">

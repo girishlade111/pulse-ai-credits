@@ -49,8 +49,6 @@ export interface ChatMessage {
   status: ChatMessageStatus;
   /** The tool that produced an assistant turn. Absent on user turns. */
   requestType?: LlmRequestType;
-  /** Credits charged for an assistant turn. Absent while streaming. */
-  creditsUsed?: number;
   attachments?: ChatAttachment[];
   /** Populated when `status === "error"`. */
   error?: string;

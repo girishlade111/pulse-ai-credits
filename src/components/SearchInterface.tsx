@@ -538,7 +538,6 @@ export const SearchInterface: React.FC<SearchInterfaceProps> = ({ onResultsChang
                 text: turn.reply.text,
                 status: turn.reply.status,
                 requestType: turn.reply.requestType,
-                creditsUsed: turn.reply.creditsUsed,
                 createdAt: turn.reply.createdAt,
                 error: turn.reply.error,
                 feedback: turn.reply.feedback,
