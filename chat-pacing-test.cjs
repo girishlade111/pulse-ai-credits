@@ -12,7 +12,13 @@ const check = (n, p, d = "") => {
   console.log(`${p ? "PASS" : "FAIL"}  ${n}${d ? ` — ${d}` : ""}`);
 };
 
-/** Simulate the rAF loop against a producer emitting `perFrame` chars/frame. */
+/**
+ * Simulate the rAF loop against a producer emitting `perFrame` chars/frame.
+ *
+ * The loop must run until the reveal catches up, not just until the producer
+ * stops — the real hook keeps its animation frame alive after the last delta
+ * and only halts once it has painted everything.
+ */
 const simulate = (total, perFrame, frameMs = 16) => {
   let revealed = 0;
   let streamed = 0;
@@ -21,7 +27,7 @@ const simulate = (total, perFrame, frameMs = 16) => {
   const jumps = [];
   let prevRevealed = 0;
 
-  while (streamed < total && frames < 100000) {
+  while ((streamed < total || revealed < total) && frames < 100000) {
     streamed = Math.min(total, streamed + perFrame);
     const backlog = streamed - revealed;
     const step = Math.min(backlog, revealStep(backlog, frameMs));
@@ -33,6 +39,20 @@ const simulate = (total, perFrame, frameMs = 16) => {
   }
 
   return { frames, revealed, streamed, maxLag: Math.max(...lags), maxJump: Math.max(...jumps) };
+};
+
+/** Run an arbitrary per-frame production plan, then let the reveal settle. */
+const simulatePlan = (plan, frameMs = 16) => {
+  let revealed = 0;
+  let streamed = 0;
+  let maxLag = 0;
+  for (const perFrame of [...plan, ...Array(400).fill(0)]) {
+    streamed += perFrame;
+    const backlog = streamed - revealed;
+    revealed = Math.min(streamed, revealed + revealStep(backlog, frameMs));
+    maxLag = Math.max(maxLag, backlog);
+  }
+  return { revealed, streamed, maxLag };
 };
 
 const BASE = 0.55; // chars/ms floor
