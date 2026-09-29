@@ -125,12 +125,13 @@ export const useStreamReveal = (
         return;
       }
 
-      // Blend the catch-up term with a speed that finishes the whole reply
-      // within MIN_REVEAL_MS at the latest.
+      // Hold the reply to at least MIN_REVEAL_MS, so even a short one is visibly
+      // written rather than dropped in. The floor uses the *total* length, not
+      // the progress so far — otherwise the first frame already outruns it.
       const elapsedTotal = now - startedAt;
       const floorRate = Math.max(
         BASE_RATE,
-        current / Math.max(1, MIN_REVEAL_MS - elapsedTotal)
+        total / Math.max(1, MIN_REVEAL_MS - elapsedTotal)
       );
       const backlog = total - current;
       const rate = Math.max(floorRate, BASE_RATE + backlog / CATCHUP_MS);
