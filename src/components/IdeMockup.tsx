@@ -156,7 +156,7 @@ const CODE_LINES: { tokens: React.ReactNode; gutter?: string }[] = [
     tokens: (
       <>
         <span className="text-muted-soft">14</span>{" "}
-        <span className="text-ink">cost</span>
+        <span className="text-ink">signal</span>
         <span className="text-muted-soft">:</span>
       </>
     ),
@@ -166,12 +166,10 @@ const CODE_LINES: { tokens: React.ReactNode; gutter?: string }[] = [
     tokens: (
       <>
         <span className="text-muted-soft">15</span>{" "}
-        <span className="text-ink">credits</span>
+        <span className="text-ink">controller</span>
         <span className="text-muted-soft">.</span>
-        <span className="text-primary">reserve</span>
-        <span className="text-muted-soft">(</span>
-        <span className="text-ink">creditsRequired</span>
-        <span className="text-muted-soft">),</span>
+        <span className="text-primary">signal</span>
+        <span className="text-muted-soft">,</span>
       </>
     ),
     gutter: "  {",
@@ -180,9 +178,9 @@ const CODE_LINES: { tokens: React.ReactNode; gutter?: string }[] = [
     tokens: (
       <>
         <span className="text-muted-soft">16</span>{" "}
-        <span className="text-ink">deposit</span>
+        <span className="text-ink">keepPartial</span>
         <span className="text-muted-soft">: </span>
-        <span className="text-primary">false</span>
+        <span className="text-primary">true</span>
         <span className="text-muted-soft">,</span>
       </>
     ),
