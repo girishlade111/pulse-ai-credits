@@ -29,7 +29,7 @@ import { ChatTurn } from "@/components/chat/chat-turn";
 import { ChatWelcome } from "@/components/chat/chat-welcome";
 import { useProvider } from "@/contexts/ProviderContext";
 import { LlmError, streamCompletion, type LlmRequestType, type TurnRecord } from "@/lib/llm";
-import { DEFAULT_MODE_ID, getMode, getModeCost } from "@/lib/chat-modes";
+import { DEFAULT_MODE_ID, getMode } from "@/lib/chat-modes";
 import {
   MAX_FILES,
   buildAttachmentContent,
@@ -175,7 +175,6 @@ export const SearchInterface: React.FC<SearchInterfaceProps> = ({ onResultsChang
   const runRequest = React.useCallback(
     async (request: SendRequest) => {
       const { prompt, requestType, attachments: files, truncateAt } = request;
-      const cost = getModeCost(requestType);
       const storeApi = storeRef.current;
 
       /*

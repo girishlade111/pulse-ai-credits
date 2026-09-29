@@ -1,7 +1,10 @@
 /**
- * The tool registry. Every mode carries its own cost, icon, timeline, prompt
- * and credit-accounting bucket, so the composer, the message list, the sidebar
- * and the credit maths all read from one source of truth.
+ * The tool registry. Every mode carries its own icon, timeline and prompt, so
+ * the composer, the message list and the sidebar all read from one source of
+ * truth.
+ *
+ * Modes used to carry a `credits` cost and a `premium` flag. Runs are free
+ * now, so there is no cost to compute and nothing to gate.
  */
 
 import type { ComponentType } from "react";
@@ -18,15 +21,7 @@ export interface ChatMode {
   description: string;
   placeholder: string;
   icon: IconType;
-  credits: number;
   stages: TimelineStage[];
-  /** Business-plan-only tools. */
-  premium?: boolean;
-  /**
-   * How the run is recorded against the ledger. Several tools share a bucket
-   * on purpose so the dashboard groups them.
-   */
-  ledgerType: "normal_search" | "deep_research" | "image_generation";
   /** Shown on the welcome screen as a one-click starter prompt. */
   suggestions: string[];
 }
