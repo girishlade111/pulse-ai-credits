@@ -151,6 +151,8 @@ export const fileToAttachment = async (file: File): Promise<ChatAttachment> => {
     name: file.name,
     type,
     size: file.size,
+    // Parsing a PDF takes a moment, so the composer can show progress.
+    reading: isPdf(type, file.name),
     url: isImage(type) ? URL.createObjectURL(file) : undefined,
   };
 

@@ -625,7 +625,7 @@ export const SearchInterface: React.FC<SearchInterfaceProps> = ({ onResultsChang
       ref={fileInputRef}
       type="file"
       multiple
-      accept=".txt,.md,.csv,.pdf,.js,.ts,.tsx,.jsx,.py,.java,.cpp,.h,.html,.css,.json,.xml,.yml,.yaml,.sql,.sh,image/*"
+      accept=".txt,.md,.csv,.pdf,.docx,.pptx,.xlsx,.js,.ts,.tsx,.jsx,.py,.java,.cpp,.h,.html,.css,.json,.xml,.yml,.yaml,.sql,.sh,image/*"
       onChange={(event) => {
         void addFiles(Array.from(event.target.files ?? []));
         event.target.value = "";
