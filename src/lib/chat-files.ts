@@ -60,7 +60,7 @@ export const isPdf = (type: string, name = ""): boolean =>
 
 export const validateFile = (file: File): string | null => {
   if (file.size > MAX_FILE_SIZE) return "File size too large. Maximum size is 10MB.";
-  if (!ALLOWED_MIME.has(file.type) && !ALLOWED_EXTENSION.test(file.name)) {
+  if (!ALLOWED_MIME.has(file.type) && !ALLOWED_EXTENSION.test(file.name) && !RICH_DOC.test(file.name)) {
     return "File type not supported. Use images, text, PDF, or code files.";
   }
   return null;
