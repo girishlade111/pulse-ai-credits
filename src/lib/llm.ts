@@ -468,17 +468,40 @@ const runOnce = async ({
   return full;
 };
 
-/** Reads the optional trailing usage report. */
+/**
+ * Reads the optional trailing usage report.
+ *
+ * The wire format is snake_case (`prompt_tokens`, `completion_tokens`) because
+ * that is the OpenAI-compatible shape every gateway speaks; the app works in
+ * camelCase. Both spellings are accepted, since a proxy may rename the fields,
+ * and an unrecognised payload is ignored rather than trusted.
+ */
 const readUsage = (payload: unknown): TokenUsage | undefined => {
-  const usage = (payload as { usage?: TokenUsage })?.usage;
-  if (!usage || typeof usage !== "object") return undefined;
-  if (
-    typeof usage.promptTokens !== "number" &&
-    typeof usage.completionTokens !== "number" &&
-    typeof usage.totalTokens !== "number"
-  ) {
+  const raw = (payload as { usage?: Record<string, unknown> })?.usage;
+  if (!raw || typeof raw !== "object") return undefined;
+
+  const num = (...keys: string[]): number | undefined => {
+    for (const key of keys) {
+      const value = raw[key];
+      if (typeof value === "number" && Number.isFinite(value)) return value;
+    }
     return undefined;
+  };
+
+  const usage: TokenUsage = {
+    promptTokens: num("prompt_tokens", "promptTokens"),
+    completionTokens: num("completion_tokens", "completionTokens"),
+    totalTokens: num("total_tokens", "totalTokens"),
+  };
+
+  const hasAny = usage.promptTokens !== undefined || usage.completionTokens !== undefined || usage.totalTokens !== undefined;
+  if (!hasAny) return undefined;
+
+  // Fill in a missing total from the two halves rather than showing nothing.
+  if (usage.totalTokens === undefined && (usage.promptTokens !== undefined || usage.completionTokens !== undefined)) {
+    usage.totalTokens = (usage.promptTokens ?? 0) + (usage.completionTokens ?? 0);
   }
+
   return usage;
 };
 
