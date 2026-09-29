@@ -310,6 +310,13 @@ const ReplyBody: React.FC<{ text: string; streaming: boolean }> = ({ text, strea
       <Markdown
         content={shown}
         className={cn((streaming || lagging) && "md-streaming")}
+        /*
+         * `data-chat-status` on the bubble reports the *stream*, which finishes
+         * before the write-stream does. This attribute reports the rendered
+         * state, so a consumer never has to know the reveal exists to know
+         * whether the answer on screen is complete.
+         */
+        data-revealing={lagging ? "true" : undefined}
       />
       {lagging && (
         <button type="button" onClick={() => setDismissed(true)} className="md-skip">
