@@ -39,29 +39,52 @@ interface AttachmentListProps {
   attachments: { id: string; name: string; type: string; size: number; url?: string }[];
 }
 
-const AttachmentList: React.FC<AttachmentListProps> = ({ attachments }) => (
-  <ul className="mt-3 space-y-1.5 border-t border-hairline pt-3">
-    {attachments.map((attachment) => (
-      <li key={attachment.id} className="flex items-center gap-2">
-        {isImage(attachment.type) && attachment.url ? (
-          <img
-            src={attachment.url}
-            alt={attachment.name}
-            className="h-7 w-7 shrink-0 rounded border border-hairline object-cover"
-          />
-        ) : (
-          <FileText className="h-3.5 w-3.5 shrink-0 text-muted" />
-        )}
-        <span className="min-w-0 flex-1 truncate caption text-muted" title={attachment.name}>
-          {attachment.name}
-        </span>
-        <span className="caption shrink-0 text-muted-soft">
-          {fileTypeLabel(attachment)} · {formatFileSize(attachment.size)}
-        </span>
-      </li>
-    ))}
-  </ul>
-);
+const AttachmentList: React.FC<AttachmentListProps> = ({ attachments }) => {
+  /*
+   * An image preview is a blob URL, which is alive only for the page that
+   * created it. After a reload the transcript is restored from storage but the
+   * blobs are gone, so a dead preview falls back to the file icon rather than
+   * showing a broken image.
+   */
+  const [dead, setDead] = React.useState<Set<string>>(() => new Set());
+
+  return (
+    <ul className="mt-3 space-y-1.5 border-t border-hairline pt-3">
+      {attachments.map((attachment) => {
+        const showImage =
+          isImage(attachment.type) && attachment.url && !dead.has(attachment.id);
+        return (
+          <li key={attachment.id} className="flex items-center gap-2">
+            {showImage ? (
+              <img
+                src={attachment.url}
+                alt={attachment.name}
+                className="h-7 w-7 shrink-0 rounded border border-hairline object-cover"
+                onError={() =>
+                  setDead((prev) => new Set(prev).add(attachment.id))
+                }
+              />
+            ) : (
+              <FileText className="h-3.5 w-3.5 shrink-0 text-muted" />
+            )}
+            <span
+              className="min-w-0 flex-1 truncate caption text-muted"
+              title={attachment.name}
+            >
+              {attachment.name}
+            </span>
+            {attachment.error && (
+              <span className="caption shrink-0 text-destructive">unreadable</span>
+            )}
+            <span className="caption shrink-0 text-muted-soft">
+              {fileTypeLabel(attachment)} · {formatFileSize(attachment.size)}
+            </span>
+          </li>
+        );
+      })}
+    </ul>
+  );
+};
 
 const formatTime = (iso: string): string =>
   new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });

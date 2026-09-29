@@ -121,9 +121,12 @@ const REPLY = [
   check("image attaches", (await page.getByText("shot.png").count()) > 0);
 
   // pdf (parsed through pdf.js from a CDN)
+  const readingSeen = page
+    .waitForSelector("text=Reading", { timeout: 8000 })
+    .then(() => true)
+    .catch(() => false);
   await fileInput.setInputFiles(path.join(TMP, "report.pdf"));
-  await page.waitForTimeout(600);
-  check("pdf attaches and shows a reading state", (await page.getByText("Reading").count()) > 0);
+  check("pdf shows a reading state while it parses", await readingSeen, "");
   await page.waitForFunction(
     () => !document.body.textContent.includes("Reading…"),
     null,
