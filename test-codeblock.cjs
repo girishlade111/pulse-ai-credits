@@ -6,7 +6,7 @@
  * markdown a real model happens to emit.
  */
 const { chromium } = require("playwright");
-const BASE = "http://localhost:8081";
+const BASE = process.env.BASE_URL || "http://localhost:8080";
 const OUT = "C:/Users/GIRISH~1/AppData/Local/Temp/opencode/shots";
 const results = [];
 const check = (n, p, d = "") => {
