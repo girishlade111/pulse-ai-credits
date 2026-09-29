@@ -24,6 +24,7 @@ export const ErrorScreen: React.FC<ErrorScreenProps> = ({
   message,
   note,
 }) => {
+  const navigate = useNavigate();
 
   return (
     <main className="page flex min-h-dvh flex-col items-center justify-center py-16 text-center">
