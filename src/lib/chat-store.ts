@@ -52,6 +52,48 @@ interface PersistedShape {
 
 const EMPTY: PersistedShape = { sessions: [], activeId: null };
 
+/**
+ * One read, shared by every consumer and every mount.
+ *
+ * Module-level on purpose. React's StrictMode mounts an effect, tears it down,
+ * and mounts it again — so a per-effect "only hydrate once" guard plus a
+ * per-effect cancellation flag means the *only* run gets cancelled and the
+ * history never appears at all. Caching the promise at module scope makes the
+ * read idempotent instead, which is what it actually is.
+ */
+let hydration: Promise<PersistedShape> | null = null;
+
+const hydrate = (): Promise<PersistedShape> => {
+  if (hydration) return hydration;
+
+  hydration = (async () => {
+    const sessions = (await loadSessions()).filter(isSession);
+
+    // Carry over a history written by the previous localStorage version, so
+    // upgrading does not look like every chat was deleted.
+    const legacy = readLegacy();
+    if (!sessions.length && legacy.sessions.length) {
+      await saveSessions(legacy.sessions);
+      try {
+        window.localStorage.removeItem(LEGACY_KEY);
+      } catch {
+        // The copy is already in IndexedDB; leaving the old key is harmless.
+      }
+      return { sessions: legacy.sessions, activeId: legacy.activeId };
+    }
+
+    const storedActiveId = await loadMeta(ACTIVE_SESSION_KEY);
+    const activeId =
+      typeof storedActiveId === "string" && sessions.some((s) => s.id === storedActiveId)
+        ? storedActiveId
+        : legacy.activeId;
+
+    return { sessions, activeId: activeId ?? null };
+  })();
+
+  return hydration;
+};
+
 const isSession = (value: unknown): value is ChatSession => {
   const session = value as ChatSession | null;
   return !!session && typeof session.id === "string" && Array.isArray(session.messages);
@@ -77,19 +119,9 @@ const readLegacy = (): PersistedShape => {
   }
 };
 
-const readStorage = (): PersistedShape => {
-  if (typeof window === "undefined") return EMPTY;
-  try {
-    const raw = window.localStorage.getItem(VIEW_KEY);
-    return raw === "1" ? { sessions: [], activeId: null } : EMPTY;
-  } catch {
-    return EMPTY;
-  }
-};
-
 /**
  * Whether the user left the workspace in the chat view. Reloading mid-chat
- * should not dump them back on the marketing hero.
+ * should not drop them back on the empty landing.
  */
 export const readChatView = (): boolean => {
   if (typeof window === "undefined") return false;
@@ -188,49 +220,27 @@ export const useChatSessions = (): ChatStore => {
   const [state, setState] = useState<PersistedShape>(EMPTY);
   const [ready, setReady] = useState(false);
   const writeTimer = useRef<ReturnType<typeof setTimeout>>();
-  const hydrated = useRef(false);
+  /**
+   * Set as soon as anything local happens, so a slow hydration read cannot
+   * overwrite work the user did in the meantime.
+   */
+  const touched = useRef(false);
 
   /*
    * Hydrate once. IndexedDB is asynchronous, so the first render has no
    * history; `ready` tells consumers to wait rather than flash an empty state.
-   * A `localStorage` history from the previous version is imported on the way
-   * in, so upgrading does not appear to delete every chat.
+   *
+   * There is no cancellation flag here on purpose — see the note on
+   * `hydrate()` above. React 18 dropped the "setState on unmounted component"
+   * warning, and StrictMode's simulated unmount must not be able to cancel the
+   * one real read. The `touched` ref, not a cancellation flag, is what stops
+   * stale data from clobbering newer work.
    */
   useEffect(() => {
-    if (hydrated.current) return;
-    hydrated.current = true;
-    let cancelled = false;
-
-    void (async () => {
-      let sessions = (await loadSessions()).filter(isSession);
-
-      // Carry over a history written by the previous localStorage version, so
-      // upgrading does not look like every chat was deleted.
-      const legacy = readLegacy();
-      if (!sessions.length && legacy.sessions.length) {
-        sessions = legacy.sessions;
-        await saveSessions(sessions);
-        try {
-          window.localStorage.removeItem(LEGACY_KEY);
-        } catch {
-          // The copy is already in IndexedDB; leaving the old key is harmless.
-        }
-      }
-
-      const storedActiveId = await loadMeta(ACTIVE_SESSION_KEY);
-      const activeId =
-        typeof storedActiveId === "string" && sessions.some((s) => s.id === storedActiveId)
-          ? storedActiveId
-          : legacy.activeId;
-
-      if (cancelled) return;
-      setState({ sessions, activeId: activeId ?? null });
+    void hydrate().then((loaded) => {
+      setState((prev) => (touched.current || prev.sessions.length ? prev : loaded));
       setReady(true);
-    })();
-
-    return () => {
-      cancelled = true;
-    };
+    });
   }, []);
 
   // Debounced persistence. `sessions` identity changes on every streamed chunk.
@@ -249,6 +259,7 @@ export const useChatSessions = (): ChatStore => {
 
   const mutate = useCallback(
     (sessionId: string, updater: (session: ChatSession) => ChatSession) => {
+      touched.current = true;
       setState((prev) => ({
         ...prev,
         sessions: prev.sessions.map((session) =>
@@ -265,6 +276,7 @@ export const useChatSessions = (): ChatStore => {
   });
 
   const createSession = useCallback(() => {
+    touched.current = true;
     const now = new Date().toISOString();
     const session: ChatSession = {
       id: uid("chat"),
@@ -281,6 +293,7 @@ export const useChatSessions = (): ChatStore => {
   }, []);
 
   const selectSession = useCallback((id: string | null) => {
+    touched.current = true;
     setState((prev) => {
       // Selecting an empty session is a no-op: "new chat" is explicit.
       if (id && !prev.sessions.some((session) => session.id === id)) return prev;
@@ -289,6 +302,7 @@ export const useChatSessions = (): ChatStore => {
   }, []);
 
   const deleteSession = useCallback((id: string) => {
+    touched.current = true;
     // Remove from IndexedDB immediately; the debounced writer would otherwise
     // rewrite the whole set, including the session being deleted.
     void deleteStoredSession(id);
@@ -317,6 +331,7 @@ export const useChatSessions = (): ChatStore => {
   );
 
   const clearAll = useCallback(() => {
+    touched.current = true;
     void clearStoredSessions();
     setState({ sessions: [], activeId: null });
   }, []);

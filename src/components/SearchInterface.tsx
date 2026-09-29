@@ -146,15 +146,17 @@ export const SearchInterface: React.FC<SearchInterfaceProps> = ({ onResultsChang
   }, [chatMode, onResultsChange]);
 
   // Restore the last conversation on reload — that is the whole point of a
-  // history. An active session always wins; otherwise fall back to the flag
-  // the chat view left behind.
-  const bootstrapped = React.useRef(false);
+  // history.
+  //
+  // Driven by `store.ready`, not by a "run once on mount" ref. The store fills
+  // in asynchronously from IndexedDB, so on first mount `active` is always
+  // null; a mount-once effect therefore always reads an empty store and the
+  // restored conversation is never picked up. Reacting to `ready` re-checks
+  // once the real history lands, and setting the flag twice is a no-op.
   React.useEffect(() => {
-    if (bootstrapped.current) return;
-    bootstrapped.current = true;
-    const restored = storeRef.current.active;
-    if (restored && restored.messages.length > 0) setChatModeState(true);
-  }, []);
+    if (!store.ready) return;
+    if (store.active && store.active.messages.length > 0) setChatModeState(true);
+  }, [store.ready, store.active]);
 
   // Never leave a request running after the view goes away.
   React.useEffect(
