@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { useWorkspace } from "@/contexts/WorkspaceContext";
+import { useCredits } from "@/lib/credits";
 import { supabase } from "@/integrations/supabase/client";
 import { MinimalisticIcons } from "@/components/ui/minimalistic-icons";
 import { Footer } from "@/components/layout/Footer";
@@ -26,7 +26,7 @@ interface TopupPackage {
 }
 
 const Plans: React.FC = () => {
-  const { subscription, setSubscription, topup } = useWorkspace();
+  const { subscription, setSubscription, topup } = useCredits();
   const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
   const [topupPackages, setTopupPackages] = useState<TopupPackage[]>([]);
   const [loading, setLoading] = useState(true);

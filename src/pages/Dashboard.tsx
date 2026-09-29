@@ -1,7 +1,7 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { useWorkspace } from "@/contexts/WorkspaceContext";
+import { useCredits } from "@/lib/credits";
 import { MinimalisticIcons } from "@/components/ui/minimalistic-icons";
 import { Footer } from "@/components/layout/Footer";
 import { TimelinePill, type TimelineStage } from "@/components/TimelinePill";
@@ -37,7 +37,7 @@ const TOOL_TIPS = [
 ];
 
 const Dashboard: React.FC = () => {
-  const { credits, subscription, transactions } = useWorkspace();
+  const { credits, subscription, transactions } = useCredits();
   const navigate = useNavigate();
 
   const stats = [
