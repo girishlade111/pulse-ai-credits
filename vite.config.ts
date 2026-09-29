@@ -25,6 +25,9 @@ const LLM_PROXY_PREFIX = "/api/llm";
 /** Non-streaming requests are given a longer ceiling than the client default. */
 const UPSTREAM_TIMEOUT_MS = 180_000;
 
+/** Availability probes must be cheap, so they get a tight deadline. */
+const PROBE_TIMEOUT_MS = 25_000;
+
 const PROVIDER_IDS = ["apinex", "atria", "mistral", "inception"] as const;
 
 type ProviderId = (typeof PROVIDER_IDS)[number];
@@ -50,9 +53,12 @@ const isProviderId = (value: string): value is ProviderId =>
  * rest on req.url — so the provider id is parsed out of the remainder here.
  */
 const matchProvider = (url: string | undefined): string | null => {
-  const match = /^\/([^/]+)\/chat\/completions/.exec(url ?? "");
+  const match = /^\/([^/]+)\/(chat\/completions|health)/.exec(url ?? "");
   return match ? match[1] : null;
 };
+
+const isHealthRoute = (url: string | undefined): boolean =>
+  /^\/[^/]+\/health/.test(url ?? "");
 
 const readBody = (req: IncomingMessage): Promise<string> =>
   new Promise((resolve, reject) => {
@@ -115,6 +121,48 @@ const llmProxy = (providers: Record<ProviderId, ProviderEntry>): Plugin => ({
 
       // The client may pin a model, but the default comes from the server.
       payload.model = payload.model || entry.model;
+
+      /**
+       * Availability probe used by the provider picker. Sends the smallest
+       * possible completion so a blocked key or a rate limit shows up in the
+       * menu instead of failing a real run. The provider's own message is
+       * passed through so the reason is actionable.
+       */
+      if (isHealthRoute(req.url)) {
+        try {
+          const probe = await fetch(`${entry.baseUrl}/chat/completions`, {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${entry.apiKey}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              model: entry.model,
+              max_tokens: 1,
+              messages: [{ role: "user", content: "hi" }],
+            }),
+            signal: AbortSignal.timeout(PROBE_TIMEOUT_MS),
+          });
+
+          if (probe.ok) {
+            await probe.text().catch(() => "");
+            return sendJson(res, 200, { ok: true });
+          }
+
+          const body = await probe.text().catch(() => "");
+          const detail =
+            /"message"\s*:\s*"([^"]+)"/.exec(body)?.[1] ?? `HTTP ${probe.status}`;
+          return sendJson(res, 200, { ok: false, status: probe.status, detail });
+        } catch (error) {
+          return sendJson(res, 200, {
+            ok: false,
+            detail:
+              error instanceof Error && error.name === "TimeoutError"
+                ? "no response"
+                : `unreachable: ${error instanceof Error ? error.message : "unknown"}`,
+          });
+        }
+      }
 
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), UPSTREAM_TIMEOUT_MS);

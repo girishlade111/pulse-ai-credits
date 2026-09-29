@@ -27,6 +27,11 @@ export interface ProviderMeta {
   maxTokens: number;
   /** Short caveat shown under the picker. */
   note?: string;
+  /**
+   * Account-side prerequisite, surfaced in the picker. These are provider policy
+   * gates that no amount of client code can satisfy.
+   */
+  requires?: string;
 }
 
 export const PROVIDERS: Record<ProviderId, ProviderMeta> = {
@@ -35,6 +40,8 @@ export const PROVIDERS: Record<ProviderId, ProviderMeta> = {
     label: "apinex",
     model: "free/gpt-6-luna",
     maxTokens: 4096,
+    note: "Free tier: one check-in per day keeps it available.",
+    requires: "Needs a daily check-in at apinex.bond/airdrop?tab=quests",
   },
   atria: {
     id: "atria",
@@ -49,6 +56,8 @@ export const PROVIDERS: Record<ProviderId, ProviderMeta> = {
     model: "mistral-small-latest",
     docs: "https://docs.mistral.ai/api",
     maxTokens: 4096,
+    note: "Free tier is aggressively rate limited.",
+    requires: "Key is currently rate limited (HTTP 429)",
   },
   inception: {
     id: "inception",
@@ -62,7 +71,12 @@ export const PROVIDERS: Record<ProviderId, ProviderMeta> = {
 
 export const PROVIDER_LIST: ProviderMeta[] = PROVIDER_IDS.map((id) => PROVIDERS[id]);
 
-export const DEFAULT_PROVIDER: ProviderId = "apinex";
+/**
+ * Atria is the default because it is the one provider whose key is currently
+ * serving requests without an account-side gate. apinex and Mistral are still
+ * selectable once their prerequisites are met.
+ */
+export const DEFAULT_PROVIDER: ProviderId = "atria";
 
 export const isProviderId = (value: unknown): value is ProviderId =>
   typeof value === "string" && (PROVIDER_IDS as readonly string[]).includes(value);

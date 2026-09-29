@@ -18,8 +18,24 @@ import {
 } from "@/components/ui/select";
 import { CHAT_MODES, getMode, type ChatMode } from "@/lib/chat-modes";
 import { fileTypeLabel, formatFileSize, isImage } from "@/lib/chat-files";
+import { useProvider } from "@/contexts/ProviderContext";
+import { PROVIDER_LIST, type ProviderId } from "@/lib/providers";
+import {
+  probeProviders,
+  readCachedHealth,
+  type ProviderHealth,
+} from "@/lib/provider-health";
 import { cn } from "@/lib/utils";
-import { Paperclip, Send, Square, Trash2, X } from "lucide-react";
+import {
+  Cpu,
+  ExternalLink,
+  Loader2,
+  Paperclip,
+  Send,
+  Square,
+  Trash2,
+  X,
+} from "lucide-react";
 import type { ChatAttachment } from "@/lib/chat-types";
 
 const MAX_TEXTAREA_HEIGHT = 220;
@@ -73,6 +89,23 @@ export const ChatComposer: React.FC<ChatComposerProps> = ({
   const mode = getMode(modeId);
   const ModeIcon = mode.icon;
   const canSend = value.trim().length > 0 && !busy;
+
+  const { provider, setProvider } = useProvider();
+  const [health, setHealth] = React.useState<Record<string, ProviderHealth>>(
+    () => readCachedHealth()
+  );
+  const [probing, setProbing] = React.useState(false);
+
+  // Probing costs one tiny completion per provider, so it runs on first open
+  // and the result is cached for 15 minutes.
+  const refreshHealth = React.useCallback(async () => {
+    setProbing(true);
+    try {
+      setHealth(await probeProviders());
+    } finally {
+      setProbing(false);
+    }
+  }, []);
 
   // Grow with the content, then scroll internally instead of pushing the page.
   React.useLayoutEffect(() => {
@@ -170,6 +203,55 @@ export const ChatComposer: React.FC<ChatComposerProps> = ({
             </SelectContent>
           </Select>
 
+          <Select
+            value={provider}
+            onOpenChange={(open) => {
+              if (open) void refreshHealth();
+            }}
+            disabled={busy}
+          >
+            <SelectTrigger
+              className="h-9 w-9 shrink-0 border border-hairline bg-canvas-soft p-0"
+              title={`AI provider: ${labelFor(provider)}`}
+              aria-label={`Choose an AI provider. Current: ${labelFor(provider)}`}
+            >
+              <span className="relative flex h-4 w-4 items-center justify-center">
+                <Cpu className="h-4 w-4 text-ink" />
+                {health[provider]?.status === "blocked" && (
+                  <span
+                    className="absolute -right-1 -top-1 h-1.5 w-1.5 rounded-full bg-destructive"
+                    aria-hidden="true"
+                  />
+                )}
+              </span>
+            </SelectTrigger>
+            <SelectContent className="w-80">
+              <div className="flex items-center justify-between px-2 py-1.5">
+                <span className="section-label">AI provider</span>
+                {probing ? (
+                  <Loader2 className="h-3 w-3 animate-spin text-muted" />
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => void refreshHealth()}
+                    className="caption text-muted transition-colors hover:text-ink"
+                  >
+                    Retest
+                  </button>
+                )}
+              </div>
+              {PROVIDER_LIST.map((option) => (
+                <ProviderRow
+                  key={option.id}
+                  id={option.id}
+                  current={provider}
+                  onSelect={setProvider}
+                  health={health[option.id]}
+                />
+              ))}
+            </SelectContent>
+          </Select>
+
           {busy ? (
             <Button
               variant="outline"
@@ -248,6 +330,78 @@ export const ChatComposer: React.FC<ChatComposerProps> = ({
         </p>
       )}
     </div>
+  );
+};
+
+const labelFor = (id: ProviderId) => PROVIDER_LIST.find((p) => p.id === id)?.label ?? id;
+
+/**
+ * One provider in the picker. Shows live availability so a key that needs a
+ * daily check-in or is rate limited is visible before a run is spent on it.
+ */
+const ProviderRow: React.FC<{
+  id: ProviderId;
+  current: ProviderId;
+  onSelect: (id: ProviderId) => void;
+  health?: ProviderHealth;
+}> = ({ id, current, onSelect, health }) => {
+  const option = PROVIDER_LIST.find((p) => p.id === id);
+  if (!option) return null;
+
+  const blocked = health?.status === "blocked";
+  const reason = blocked ? health?.detail || option.requires : option.note;
+
+  return (
+    <SelectItem
+      value={id}
+      onSelect={() => onSelect(id)}
+      className="items-start py-2"
+    >
+      <div className="flex w-full items-start gap-3">
+        <span
+          className={cn(
+            "mt-1.5 h-2 w-2 shrink-0 rounded-full",
+            health?.status === "ok"
+              ? "bg-success"
+              : blocked
+              ? "bg-destructive"
+              : "bg-hairline-strong"
+          )}
+          aria-hidden="true"
+        />
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center justify-between gap-2">
+            <span className="truncate text-sm">
+              {option.label}
+              {current === id && <span className="sr-only"> (current)</span>}
+            </span>
+            {option.docs && (
+              <a
+                href={option.docs}
+                target="_blank"
+                rel="noreferrer noopener"
+                onClick={(event) => event.stopPropagation()}
+                className="shrink-0 text-muted-soft transition-colors hover:text-ink"
+                aria-label={`${option.label} documentation`}
+              >
+                <ExternalLink className="h-3 w-3" />
+              </a>
+            )}
+          </div>
+          <p className="mt-0.5 truncate text-xs text-muted">{option.model}</p>
+          {reason && (
+            <p
+              className={cn(
+                "mt-1 text-xs leading-snug",
+                blocked ? "text-destructive" : "text-muted-soft"
+              )}
+            >
+              {reason}
+            </p>
+          )}
+        </div>
+      </div>
+    </SelectItem>
   );
 };
 
