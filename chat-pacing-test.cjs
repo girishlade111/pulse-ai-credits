@@ -93,14 +93,10 @@ const fast = simulate(20000, 60); // 60 chars per 16ms frame = 3.75 chars/ms
 check("a fast producer is fully caught up", fast.revealed === 20000, `${fast.revealed}`);
 check(
   "a fast producer stays within about a second of the stream",
-  fast.maxLag < (1 / BASE) * 1000 * 1.2,
-  `max lag ${fast.maxLag} chars (~${Math.round((fast.maxLag / fast.maxLag) * 0)}ms of text)`
+  fast.maxLag / BASE < 1000,
+  `max lag ${fast.maxLag} chars (~${Math.round(fast.maxLag / BASE)}ms of text)`
 );
-check(
-  "lag is bounded, not growing without limit",
-  fast.maxLag < 2000,
-  `max lag ${fast.maxLag} chars`
-);
+check("lag is bounded, not growing without limit", fast.maxLag < 2000, `max lag ${fast.maxLag} chars`);
 
 /* ------------------------------------------------------- slow producer */
 const slow = simulate(3000, 2);
@@ -110,21 +106,11 @@ check("a slow producer never lags at all", slow.maxLag <= 2, `max lag ${slow.max
 /* -------------------------------------------- a mid-stream producer stall */
 {
   // 10 frames of a fast burst, then 20 frames of nothing, then more.
-  let revealed = 0;
-  let streamed = 0;
-  let stalled = 0;
-  const plan = [
-    ...Array(10).fill(300),
-    ...Array(20).fill(0),
-    ...Array(10).fill(300),
-  ];
-  for (const perFrame of plan) {
-    streamed += perFrame;
-    const backlog = streamed - revealed;
-    revealed = Math.min(streamed, revealed + revealStep(backlog, 16));
-  }
+  const plan = [...Array(10).fill(300), ...Array(20).fill(0), ...Array(10).fill(300)];
+  const { revealed, streamed, maxLag } = simulatePlan(plan);
   check("a producer stall does not strand the reveal", revealed === streamed, `${revealed}/${streamed}`);
-  check("the reveal recovers during a stall", stalled === 0 && revealed > 0);
+  check("the reveal keeps painting through a stall", revealed > 0 && maxLag > 0, `max lag ${maxLag}`);
+  check("the reveal fully drains after the last delta", revealed === streamed);
 }
 
 console.log(`\n${results.filter((r) => r.p).length}/${results.length} checks passed`);
