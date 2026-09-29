@@ -247,7 +247,7 @@ const STAGES: { stage: TimelineStage; label: string; note: string; active?: bool
   { stage: "grep", label: "Grepping", note: "Swept 214 files, 12 matches" },
   { stage: "read", label: "Reading", note: "8 sources opened" },
   { stage: "edit", label: "Editing", note: "report.markdown drafted" },
-  { stage: "done", label: "Done", note: "40 credits · 11.4s" },
+  { stage: "done", label: "Done", note: "report saved · 11.4s" },
 ];
 
 export const IdeMockup: React.FC<{ className?: string }> = ({ className }) => (
@@ -347,7 +347,7 @@ export const IdeMockup: React.FC<{ className?: string }> = ({ className }) => (
             <code>
               <span className="text-muted-soft">$</span> pulse run research.ts{"\n"}
               <span className="text-success">✓</span> report.md written{" "}
-              <span className="text-muted-soft">· 40 credits</span>
+              <span className="text-muted-soft">· 8 stages</span>
             </code>
           </pre>
         </div>
