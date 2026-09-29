@@ -78,11 +78,12 @@ interface ChatTurnProps {
     createdAt: string;
     error?: string;
     feedback?: "up" | "down";
+    tokens?: ChatTokens;
   };
   copied: boolean;
   busy: boolean;
   onCopy: () => void;
-  onExport: () => void;
+  onExport: (format: ExportFormat) => void;
   onRegenerate: () => void;
   onFeedback: (value: "up" | "down" | undefined) => void;
 }
@@ -227,24 +228,25 @@ export const ChatTurn: React.FC<ChatTurnProps> = ({
                         aria-pressed={reply.feedback === "up"}
                         title="Helpful"
                       >
-                      <ThumbsUp
-                        className={cn(reply.feedback === "up" && "text-success")}
-                      />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8"
-                      onClick={() => onFeedback(reply.feedback === "down" ? undefined : "down")}
-                      aria-label="Not helpful"
-                      aria-pressed={reply.feedback === "down"}
-                      title="Not helpful"
-                    >
-                      <ThumbsDown
-                        className={cn(reply.feedback === "down" && "text-destructive")}
-                      />
-                    </Button>
-                  </span>
+                        <ThumbsUp
+                          className={cn(reply.feedback === "up" && "text-success")}
+                        />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => onFeedback(reply.feedback === "down" ? undefined : "down")}
+                        aria-label="Not helpful"
+                        aria-pressed={reply.feedback === "down"}
+                        title="Not helpful"
+                      >
+                        <ThumbsDown
+                          className={cn(reply.feedback === "down" && "text-destructive")}
+                        />
+                      </Button>
+                    </span>
+                  </div>
                 </div>
               )}
             </div>

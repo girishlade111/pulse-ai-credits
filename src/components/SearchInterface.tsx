@@ -580,12 +580,13 @@ export const SearchInterface: React.FC<SearchInterfaceProps> = ({ onResultsChang
                 createdAt: turn.reply.createdAt,
                 error: turn.reply.error,
                 feedback: turn.reply.feedback,
+                tokens: turn.reply.tokens,
               }
             }
             copied={turn.reply ? copied.has(turn.reply.id) : false}
             busy={busy}
             onCopy={() => turn.reply && void copyTurn(turn.reply)}
-            onExport={() => exportTurn(turn.prompt, turn.reply)}
+            onExport={exportChat}
             onRegenerate={() => regenerate(index)}
             onFeedback={(value) =>
               turn.reply &&

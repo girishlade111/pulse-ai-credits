@@ -76,7 +76,25 @@ const looksLikeText = (file: File): boolean =>
 
 /* ------------------------------------------------------------------- pdf.js */
 
-let pdfjsLoader: Promise<typeof import("pdfjs-dist")> | null = null;
+/*
+ * pdf.js is loaded from a CDN, so it has no compile-time types here. Only four
+ * APIs are used, and they are declared rather than pulling in the package's
+ * types — which would add a devDependency for a module that is not bundled.
+ */
+interface PdfJsTextContent {
+  items: { str?: string }[];
+}
+interface PdfJsDoc {
+  numPages: number;
+  getPage: (page: number) => Promise<{ getTextContent: () => Promise<PdfJsTextContent> }>;
+  destroy: () => Promise<void>;
+}
+interface PdfJs {
+  GlobalWorkerOptions: { workerSrc: string };
+  getDocument: (options: { data: Uint8Array }) => { promise: Promise<PdfJsDoc> };
+}
+
+let pdfjsLoader: Promise<PdfJs> | null = null;
 
 /**
  * Lazily loads pdf.js from a CDN. The dynamic import keeps the ~350KB parser
@@ -85,10 +103,8 @@ let pdfjsLoader: Promise<typeof import("pdfjs-dist")> | null = null;
  * If the CDN is unreachable the send still goes ahead — the model is told the
  * PDF could not be read rather than the attachment silently disappearing.
  */
-const loadPdfJs = () => {
-  pdfjsLoader ??= import(/* @vite-ignore */ PDF_JS_URL) as unknown as Promise<
-    typeof import("pdfjs-dist")
-  >;
+const loadPdfJs = (): Promise<PdfJs> => {
+  pdfjsLoader ??= import(/* @vite-ignore */ PDF_JS_URL) as Promise<PdfJs>;
   return pdfjsLoader;
 };
 
@@ -105,7 +121,7 @@ export const extractPdfText = async (data: ArrayBuffer): Promise<string> => {
     const content = await (await doc.getPage(page)).getTextContent();
     // pdf.js emits positioned fragments, not lines, so rejoin and re-space them.
     const line = content.items
-      .map((item) => ("str" in item ? item.str : ""))
+      .map((item) => item.str ?? "")
       .join(" ")
       .replace(/[ \t]+/g, " ")
       .trim();
