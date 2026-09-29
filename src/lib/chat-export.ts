@@ -89,7 +89,6 @@ const exportJson = (turns: ExportTurn[]): string =>
               status: reply.status,
               createdAt: reply.createdAt,
               tool: reply.requestType,
-              creditsUsed: reply.creditsUsed,
               tokens: reply.tokens,
             }
           : null,
