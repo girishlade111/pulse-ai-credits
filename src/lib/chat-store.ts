@@ -1,13 +1,21 @@
 /**
  * Chat session store.
  *
- * Sessions live in `localStorage` — this app has no database, and a chat that
- * disappears on reload is not a chat history. Everything is written through a
- * single reducer-style set of helpers so a streaming token updates exactly one
- * message instead of rebuilding the whole transcript.
+ * Transcripts are persisted to IndexedDB (see `chat-db.ts`) rather than
+ * `localStorage`: a chat history is the one thing here that grows without
+ * bound, and once it passes the ~5MB string quota the *entire* history write
+ * fails and the chat looks like it lost everything. Small UI preferences still
+ * use `localStorage`, where a synchronous read at first render is worth more
+ * than the extra storage.
  *
- * Writes are debounced: a streamed answer mutates state on every chunk, and
- * serialising the full transcript to storage that often would jank the stream.
+ * State updates go through a single set of helpers so a streaming token edits
+ * exactly one message, and writes are debounced — a streamed answer mutates
+ * state on every chunk, and persisting the whole transcript that often would
+ * jank the stream.
+ *
+ * The initial state is empty and filled in asynchronously, because IndexedDB
+ * cannot be read synchronously during render. Consumers get `ready` so they can
+ * hold off on a "no chats yet" empty state until the real history is in.
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -18,39 +26,64 @@ import {
   type ChatSession,
   type SessionGroup,
 } from "./chat-types";
+import {
+  ACTIVE_SESSION_KEY,
+  clearStoredSessions,
+  deleteStoredSession,
+  loadMeta,
+  loadSessions,
+  saveMeta,
+  saveSessions,
+} from "./chat-db";
 
-const STORAGE_KEY = "pulseai-chat-sessions-v1";
 const VIEW_KEY = "pulseai-chat-view-v1";
-const PERSIST_DEBOUNCE_MS = 300;
+const PERSIST_DEBOUNCE_MS = 400;
 /** Keeps storage bounded without the user noticing. */
-const MAX_SESSIONS = 100;
+const MAX_SESSIONS = 200;
 const TITLE_MAX = 60;
+
+/** The pre-IndexedDB key, so an existing history is carried over once. */
+const LEGACY_KEY = "pulseai-chat-sessions-v1";
 
 interface PersistedShape {
   sessions: ChatSession[];
   activeId: string | null;
 }
 
-const readStorage = (): PersistedShape => {
-  if (typeof window === "undefined") return { sessions: [], activeId: null };
+const EMPTY: PersistedShape = { sessions: [], activeId: null };
+
+const isSession = (value: unknown): value is ChatSession => {
+  const session = value as ChatSession | null;
+  return !!session && typeof session.id === "string" && Array.isArray(session.messages);
+};
+
+/**
+ * One-time migration from the `localStorage` era. The old payload is only
+ * removed after IndexedDB has accepted it, so an interrupted upgrade cannot
+ * lose the history.
+ */
+const readLegacy = (): PersistedShape => {
+  if (typeof window === "undefined") return EMPTY;
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return { sessions: [], activeId: null };
+    const raw = window.localStorage.getItem(LEGACY_KEY);
+    if (!raw) return EMPTY;
     const parsed = JSON.parse(raw) as Partial<PersistedShape>;
-    const sessions = Array.isArray(parsed.sessions)
-      ? parsed.sessions.filter(
-          (session): session is ChatSession =>
-            !!session && typeof session.id === "string" && Array.isArray(session.messages)
-        )
-      : [];
-    const activeId =
-      typeof parsed.activeId === "string" &&
-      sessions.some((session) => session.id === parsed.activeId)
-        ? parsed.activeId
-        : null;
-    return { sessions, activeId };
+    return {
+      sessions: Array.isArray(parsed.sessions) ? parsed.sessions.filter(isSession) : [],
+      activeId: typeof parsed.activeId === "string" ? parsed.activeId : null,
+    };
   } catch {
-    return { sessions: [], activeId: null };
+    return EMPTY;
+  }
+};
+
+const readStorage = (): PersistedShape => {
+  if (typeof window === "undefined") return EMPTY;
+  try {
+    const raw = window.localStorage.getItem(VIEW_KEY);
+    return raw === "1" ? { sessions: [], activeId: null } : EMPTY;
+  } catch {
+    return EMPTY;
   }
 };
 
