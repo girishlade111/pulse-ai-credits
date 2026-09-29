@@ -46,6 +46,7 @@ import {
   validateFile,
 } from "@/lib/chat-files";
 import { downloadExport, type ExportFormat } from "@/lib/chat-export";
+import { copyText } from "@/lib/clipboard";
 import {
   clampSidebarWidth,
   readChatView,
@@ -402,8 +403,7 @@ export const SearchInterface: React.FC<SearchInterfaceProps> = ({ onResultsChang
   );
 
   const copyTurn = React.useCallback(async (message: ChatMessage) => {
-    try {
-      await navigator.clipboard.writeText(message.text);
+    if (await copyText(message.text)) {
       setCopied((prev) => new Set(prev).add(message.id));
       setTimeout(
         () =>
@@ -414,7 +414,7 @@ export const SearchInterface: React.FC<SearchInterfaceProps> = ({ onResultsChang
           }),
         2000
       );
-    } catch {
+    } else {
       toast.error("Could not copy to the clipboard.");
     }
   }, []);
