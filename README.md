@@ -321,3 +321,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 **Built with ❤️ by the Pulse AI Team**
 
 *Experience the future of AI-powered solutions with flexible credit-based pricing.*
+
+---
+
+Built by Girish Lade — https://ladestack.in
