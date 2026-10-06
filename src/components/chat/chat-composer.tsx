@@ -270,6 +270,34 @@ export const ChatComposer: React.FC<ChatComposerProps> = ({
             <Paperclip />
           </Button>
 
+          {/*
+            The ring is the whole affordance: dictation has no visible output
+            until the recogniser settles a phrase, so the reader needs to see
+            that the microphone is open. It is `aria-live` too, because a
+            screen-reader user gets no such reassurance otherwise.
+          */}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={startDictation}
+            disabled={busy}
+            className={cn(
+              "relative h-9 w-9 shrink-0",
+              (speech.listening || speech.starting) && "text-primary"
+            )}
+            title={micTitle}
+            aria-label={micTitle}
+            aria-pressed={speech.listening || speech.starting}
+          >
+            {(speech.listening || speech.starting) && (
+              <span
+                aria-hidden="true"
+                className="pointer-events-none absolute inset-0 rounded-md ring-2 ring-primary/60 mic-pulse"
+              />
+            )}
+            <Mic />
+          </Button>
+
           <Select value={mode.id} onValueChange={onModeChange} disabled={busy}>
             <SelectTrigger
               className="h-9 w-9 shrink-0 border border-hairline bg-canvas-soft p-0"
