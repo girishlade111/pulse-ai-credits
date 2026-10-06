@@ -15,7 +15,8 @@ import { useStreamReveal } from "./use-stream-reveal";
 import { EXPORT_FORMATS, type ExportFormat } from "@/lib/chat-export";
 import { estimateTokens } from "@/lib/llm";
 import { getMode } from "@/lib/chat-modes";
-import { fileTypeLabel, formatFileSize, isImage } from "@/lib/chat-files";
+import { fileTypeLabel, formatFileSize, isImage, sourceMatches } from "@/lib/chat-files";
+import { useSpeechSynthesis } from "@/hooks/use-speech-synthesis";
 import type { ChatTokens } from "@/lib/chat-types";
 import { cn } from "@/lib/utils";
 import {
@@ -29,10 +30,13 @@ import {
   Gauge,
   Loader2,
   Pencil,
+  Quote,
   RotateCcw,
   Sparkles,
   ThumbsDown,
   ThumbsUp,
+  Volume2,
+  VolumeX,
 } from "lucide-react";
 
 interface AttachmentListProps {
@@ -133,6 +137,25 @@ export const ChatTurn: React.FC<ChatTurnProps> = ({
   const ModeIcon = mode.icon;
   const streaming = reply?.status === "streaming";
   const failed = reply?.status === "error";
+
+  /*
+   * Read aloud. Hooked here rather than in the toolbar so `speak`/`stop` are
+   * stable, and the button can reflect `speaking` without the row re-rendering
+   * during the whole stream — it is only rendered on a finished reply anyway.
+   */
+  const speech = useSpeechSynthesis();
+
+  /*
+   * Which of this turn's attachments the reply actually leaned on. A guess, and
+   * labelled as one: the model returns prose with no structured citation, so
+   * this is "the reply named or quoted this file", not proof. Rendering every
+   * attached file regardless would claim the answer came from a file it may
+   * never have opened.
+   */
+  const sources = React.useMemo(() => {
+    if (!reply?.text || !attachments?.length) return [];
+    return sourceMatches(reply.text, attachments.map((a) => a.name));
+  }, [attachments, reply?.text]);
 
   return (
     <article className="chat-turn">
