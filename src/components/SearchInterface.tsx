@@ -755,13 +755,20 @@ export const SearchInterface: React.FC<SearchInterfaceProps> = ({ onResultsChang
           </ResizablePanel>
 
           {/*
-            The drag handle and the artifact panel, in that order. Both stay
-            mounted rather than being conditionally rendered:
+            The drag handle and the artifact panel, in that order.
+
+            Both stay mounted rather than being conditionally rendered:
             `react-resizable-panels` sizes every panel from the set of registered
             panels, so adding and removing one re-flows the group and can land
-            the transcript at an arbitrary width. They are hidden with CSS
-            instead — always hidden while there is no artifact, and below `lg`
-            where the split would squeeze the transcript unreadably narrow.
+            the transcript at an arbitrary width.
+
+            Below `lg` the same panel becomes a fixed overlay instead of a split.
+            Done with CSS on the panel itself rather than by mounting a second
+            copy of the viewer for small screens: two copies means two live
+            iframes for one artifact, so the snippet runs twice and the Mermaid
+            CDN module is fetched and rendered twice — for a preview only one
+            reader can see at a time. The panel is only `hidden` outright when
+            there is no artifact at all.
 
             `collapsible` is off on purpose. It offers a second, less
             discoverable way to dismiss the panel, and the viewer's own close
@@ -772,7 +779,11 @@ export const SearchInterface: React.FC<SearchInterfaceProps> = ({ onResultsChang
             id="artifact"
             minSize={24}
             defaultSize={38}
-            className={artifact ? "hidden lg:block" : "hidden"}
+            className={
+              artifact
+                ? "fixed inset-0 z-50 flex-col bg-canvas lg:static lg:z-auto lg:block"
+                : "hidden"
+            }
           >
             {artifact ? (
               <ChatArtifactViewer artifact={artifact} onClose={() => setArtifact(null)} />
