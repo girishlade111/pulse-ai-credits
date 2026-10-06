@@ -207,10 +207,10 @@ const consoleStage = (code: string): string => `
     write("error", [event.message + (event.lineno ? " (line " + event.lineno + ")" : "")]);
   });
 })();
-<\/script>
+</script>
 <script>
 ${escapeScript(code)}
-<\/script>`;
+</script>`;
 
 /** Mermaid needs its module runtime; a failure is reported in the stage. */
 const mermaidStage = (code: string): string => `
