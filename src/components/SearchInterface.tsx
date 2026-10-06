@@ -60,7 +60,7 @@ import {
 } from "@/lib/chat-store";
 import { uid, type ChatAttachment, type ChatMessage } from "@/lib/chat-types";
 import { cn } from "@/lib/utils";
-import { AlertTriangle, Menu, PanelLeftOpen } from "lucide-react";
+import { Menu, PanelRightClose, PanelLeftOpen } from "lucide-react";
 
 export interface SearchInterfaceProps {
   /**
@@ -114,6 +114,12 @@ export const SearchInterface: React.FC<SearchInterfaceProps> = ({ onResultsChang
   const [dragActive, setDragActive] = React.useState(false);
   const [copied, setCopied] = React.useState<Set<string>>(new Set());
   const [focusToken, setFocusToken] = React.useState(0);
+  /*
+   * The single artifact on show. One at a time on purpose: a side panel with
+   * several live previews re-renders every frame on each stream, and a reader
+   * only ever compares the block they clicked against its output.
+   */
+  const [artifact, setArtifact] = React.useState<ArtifactPayload | null>(null);
 
   // One place to enter the chat, so the persisted "user is in a chat" flag and
   // the page shell can never disagree about which view is mounted.
