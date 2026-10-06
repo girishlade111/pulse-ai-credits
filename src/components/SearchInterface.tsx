@@ -792,19 +792,6 @@ export const SearchInterface: React.FC<SearchInterfaceProps> = ({ onResultsChang
         </ResizablePanelGroup>
       </div>
 
-      {/*
-        Below `lg` the split panel is CSS-hidden, so the same viewer opens as a
-        full-screen overlay instead. Kept in CSS rather than in a JS breakpoint
-        check so it cannot disagree with the panel's own `lg:` classes — two
-        sources of truth for one breakpoint is how a preview ends up rendering
-        twice on a tablet.
-      */}
-      {artifact && (
-        <div className="fixed inset-0 z-50 flex flex-col bg-canvas lg:hidden">
-          <ChatArtifactViewer artifact={artifact} onClose={() => setArtifact(null)} />
-        </div>
-      )}
-
       {/* desktop: reopen the collapsed sidebar */}
       {chatMode && sidebarCollapsed && (
         <button
