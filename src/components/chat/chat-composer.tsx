@@ -98,6 +98,34 @@ export const ChatComposer: React.FC<ChatComposerProps> = ({
   );
   const [probing, setProbing] = React.useState(false);
 
+  /*
+   * Dictation appends into the same `value` the user's typing writes to, rather
+   * than owning its own buffer. Anything else means the two can overwrite each
+   * other — a recognised phrase landing on top of half-typed text is worse than
+   * no dictation at all.
+   */
+  const [dictationBase, setDictationBase] = React.useState("");
+  const speech = useSpeechRecognition({
+    onTranscript: (text) => onChange(`${dictationBase}${dictationBase ? " " : ""}${text}`),
+  });
+
+  // Drop the anchor once dictation ends, so the next session re-reads whatever
+  // is in the box rather than appending to a stale prefix.
+  React.useEffect(() => {
+    if (!speech.listening && !speech.starting) setDictationBase("");
+  }, [speech.listening, speech.starting]);
+
+  const micTitle = !speech.supported
+    ? "Voice input is not supported in this browser"
+    : speech.listening || speech.starting
+      ? "Stop dictation"
+      : "Dictate with your voice";
+
+  const startDictation = () => {
+    setDictationBase(value.trimEnd());
+    speech.toggle();
+  };
+
   // Probing costs one tiny completion per provider, so it runs on first open
   // and the result is cached for 15 minutes.
   const refreshHealth = React.useCallback(async () => {
