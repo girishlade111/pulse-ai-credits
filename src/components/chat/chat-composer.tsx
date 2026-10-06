@@ -17,7 +17,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { CHAT_MODES, getMode, type ChatMode } from "@/lib/chat-modes";
-import { fileTypeLabel, formatFileSize, isImage } from "@/lib/chat-files";
+import { describeFile, isImage } from "@/lib/chat-files";
 import { useProvider } from "@/contexts/ProviderContext";
 import { PROVIDER_LIST, type ProviderId } from "@/lib/providers";
 import {
@@ -430,8 +430,21 @@ export const ChatComposer: React.FC<ChatComposerProps> = ({
                       ? "Reading…"
                       : attachment.error
                         ? attachment.error
-                        : `${fileTypeLabel(attachment)} · ${formatFileSize(attachment.size)}`}
+                        : describeFile(attachment)}
                   </p>
+                  {/*
+                    A CSV chip that only says "CSV · 4 KB" gives no hint the
+                    parser found structure. The header row does, and it costs
+                    one line.
+                  */}
+                  {!attachment.reading && !attachment.error && attachment.meta?.columns?.length ? (
+                    <p
+                      className="mono truncate text-[11px] text-muted-soft"
+                      title={`${attachment.meta.columns.length} columns: ${attachment.meta.columns.join(", ")}`}
+                    >
+                      {attachment.meta.columns.join(" · ")}
+                    </p>
+                  ) : null}
                 </div>
                 {attachment.reading ? (
                   <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin text-muted" />
