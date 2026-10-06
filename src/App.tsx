@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { Suspense, useCallback, useEffect, useState } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -12,10 +12,28 @@ import Index from "./pages/Index";
 import Workspace from "./pages/Workspace";
 import Features from "./pages/Features";
 import Settings from "./pages/Settings";
-import Dashboard from "./pages/Dashboard";
-import Plans from "./pages/Plans";
 import NotFound from "./pages/NotFound";
 import ServerError from "./pages/ServerError";
+
+/*
+ * Dashboard and Plans are the only routes that reach for Supabase and Recharts.
+ * They are reachable from the chat sidebar, so they have to be routed — but
+ * eagerly importing them pulled ~150kB of charting and SDK code into the entry
+ * chunk that every visit to the landing page and the workspace downloads. Split
+ * them so the chat itself ships no code it does not use.
+ */
+const Dashboard = React.lazy(() => import("./pages/Dashboard"));
+const Plans = React.lazy(() => import("./pages/Plans"));
+
+const RouteFallback: React.FC = () => (
+  <div
+    className="flex min-h-dvh items-center justify-center text-sm text-muted"
+    role="status"
+    aria-live="polite"
+  >
+    Loading…
+  </div>
+);
 
 const queryClient = new QueryClient();
 
@@ -55,7 +73,8 @@ const AppRoutes: React.FC<{
           Landing on /workspace before sending anything still shows it. */}
       {(!isChatMode || !isChatRoute) && <Navbar />}
       <ErrorBoundary key={pathname}>
-        <Routes>
+        <Suspense fallback={<RouteFallback />}>
+          <Routes>
           {/* The landing page is the front door; the chat lives at /workspace
               and the "Start" buttons link there. */}
           <Route
@@ -75,7 +94,8 @@ const AppRoutes: React.FC<{
           {/* Lets a failed gateway error deep-link somewhere real. */}
           <Route path="/error/:code" element={<ServerError />} />
           <Route path="*" element={<NotFound />} />
-        </Routes>
+          </Routes>
+        </Suspense>
       </ErrorBoundary>
     </div>
   );
