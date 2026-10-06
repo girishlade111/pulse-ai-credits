@@ -680,20 +680,34 @@ export const SearchInterface: React.FC<SearchInterfaceProps> = ({ onResultsChang
           />
         )}
 
-        <div
-          className={cn(
-            "min-w-0",
-            chatMode
-              ? cn(
-                  "flex min-h-0 flex-1 flex-col",
-                  // Reserve exactly the width the sidebar occupies, so the
-                  // transcript never slides under the drag handle.
-                  sidebarCollapsed ? "lg:ml-0" : "lg:ml-[var(--chat-sidebar-width)]"
-                )
-              : "block w-full"
-          )}
+        {/*
+          The resizable split is mounted in both views, not only in the chat.
+          `react-resizable-panels` requires a definite height on the group, so
+          the landing view overrides it to `auto` — mounting it conditionally
+          instead would put a different component in this position on the first
+          send, remounting the textarea mid-answer, which is exactly the
+          remount the composer comment above warns about.
+        */}
+        <ResizablePanelGroup
+          direction="horizontal"
+          className="min-w-0"
+          style={{ height: chatMode ? "100%" : "auto" }}
         >
-          <ChatScrollArea
+          <ResizablePanel minSize={35} className="min-w-0" order={1}>
+            <div
+              className={cn(
+                "min-w-0",
+                chatMode
+                  ? cn(
+                      "flex h-full min-h-0 flex-col",
+                      // Reserve exactly the width the sidebar occupies, so the
+                      // transcript never slides under the drag handle.
+                      sidebarCollapsed ? "lg:ml-0" : "lg:ml-[var(--chat-sidebar-width)]"
+                    )
+                  : "block w-full"
+              )}
+            >
+              <ChatScrollArea
             followKey={[messages.length, messages[messages.length - 1]?.text, chatMode]}
             transcriptKey={session?.id ?? "none"}
             header={
