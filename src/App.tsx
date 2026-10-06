@@ -1,9 +1,9 @@
-import React, { useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { PreferencesProvider } from "@/contexts/PreferencesContext";
 import { ProviderProvider } from "@/contexts/ProviderContext";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
@@ -12,13 +12,78 @@ import Index from "./pages/Index";
 import Workspace from "./pages/Workspace";
 import Features from "./pages/Features";
 import Settings from "./pages/Settings";
+import Dashboard from "./pages/Dashboard";
+import Plans from "./pages/Plans";
 import NotFound from "./pages/NotFound";
 import ServerError from "./pages/ServerError";
 
 const queryClient = new QueryClient();
 
+const CHAT_ROUTE = "/workspace";
+
+/**
+ * The routed tree.
+ *
+ * Two things here cannot live in `App`, because they need the router:
+ *
+ *  - The chat-mode flag. `isChatMode` is only ever reset to false by the landing
+ *    page, so once a conversation opened, navigating to `/settings` or
+ *    `/features` left the site navbar hidden on those pages with nothing to
+ *    restore it. Deriving the navbar from the pathname makes the flag a
+ *    per-route concern instead of a sticky one.
+ *  - The error boundary. `App` does not re-render on a location change, so a
+ *    boundary that caught an error kept showing its fallback after the user
+ *    navigated to an unrelated page — with no link out of it. Keying it on the
+ *    pathname remounts it per route, which resets the caught error.
+ */
+const AppRoutes: React.FC<{
+  isChatMode: boolean;
+  onChatModeChange: (value: boolean) => void;
+}> = ({ isChatMode, onChatModeChange }) => {
+  const { pathname } = useLocation();
+  const isChatRoute = pathname === CHAT_ROUTE;
+
+  // Leaving the workspace drops chat mode, so the navbar returns on every other
+  // page — including the ones the chat sidebar links straight to.
+  useEffect(() => {
+    if (!isChatRoute) onChatModeChange(false);
+  }, [isChatRoute, onChatModeChange]);
+
+  return (
+    <div className="min-h-screen bg-canvas">
+      {/* Hidden only while a conversation is actually open on the chat route.
+          Landing on /workspace before sending anything still shows it. */}
+      {(!isChatMode || !isChatRoute) && <Navbar />}
+      <ErrorBoundary key={pathname}>
+        <Routes>
+          {/* The landing page is the front door; the chat lives at /workspace
+              and the "Start" buttons link there. */}
+          <Route
+            path="/"
+            element={<Index onChatModeChange={onChatModeChange} />}
+          />
+          <Route
+            path={CHAT_ROUTE}
+            element={<Workspace onChatModeChange={onChatModeChange} />}
+          />
+          <Route path="/features" element={<Features />} />
+          <Route path="/settings" element={<Settings />} />
+          {/* Linked from the chat sidebar; without these both landed on the 404. */}
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/plans" element={<Plans />} />
+          <Route path="/404" element={<NotFound />} />
+          {/* Lets a failed gateway error deep-link somewhere real. */}
+          <Route path="/error/:code" element={<ServerError />} />
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </ErrorBoundary>
+    </div>
+  );
+};
+
 const App = () => {
   const [isChatMode, setIsChatMode] = useState(false);
+  const handleChatModeChange = useCallback((value: boolean) => setIsChatMode(value), []);
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -29,33 +94,13 @@ const App = () => {
               {/*
                * The chat owns the whole viewport and draws its own header, so
                * the site navbar is hidden while a conversation is open. Every
-               * other page keeps it.
+               * other page keeps it — see `AppRoutes`, which keys that off the
+               * route rather than off a flag that could latch.
                */}
-              <div className="min-h-screen bg-canvas">
-                {!isChatMode && <Navbar />}
-                <ErrorBoundary>
-                  <Routes>
-                    {/*
-                     * The landing page is the front door; the chat lives at
-                     * /workspace and the "Start" buttons link here.
-                     */}
-                    <Route
-                      path="/"
-                      element={<Index onChatModeChange={setIsChatMode} />}
-                    />
-                    <Route
-                      path="/workspace"
-                      element={<Workspace onChatModeChange={setIsChatMode} />}
-                    />
-                    <Route path="/features" element={<Features />} />
-                    <Route path="/settings" element={<Settings />} />
-                    <Route path="/404" element={<NotFound />} />
-                    {/* Lets a failed gateway error deep-link somewhere real. */}
-                    <Route path="/error/:code" element={<ServerError />} />
-                    <Route path="*" element={<NotFound />} />
-                  </Routes>
-                </ErrorBoundary>
-              </div>
+              <AppRoutes
+                isChatMode={isChatMode}
+                onChatModeChange={handleChatModeChange}
+              />
             </BrowserRouter>
           </ProviderProvider>
         </PreferencesProvider>

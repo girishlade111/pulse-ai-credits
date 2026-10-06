@@ -131,6 +131,14 @@ export const SearchInterface: React.FC<SearchInterfaceProps> = ({ onResultsChang
 
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const abortRef = React.useRef<AbortController | null>(null);
+  /**
+   * Bumped on every run. `abortRef` is a single slot, so without this a superseded
+   * run's `finally` could null out the *current* run's controller: "New chat"
+   * aborts the old run and starts a new one, and when the old run unwound it
+   * cleared `abortRef` — leaving Stop wired to nothing for the run that was
+   * actually streaming.
+   */
+  const runIdRef = React.useRef(0);
   const storeRef = React.useRef(store);
   storeRef.current = store;
 
@@ -232,6 +240,7 @@ export const SearchInterface: React.FC<SearchInterfaceProps> = ({ onResultsChang
 
       const controller = new AbortController();
       abortRef.current = controller;
+      const runId = ++runIdRef.current;
 
       /*
        * The stored transcript is paired into turns and handed over as-is. The
@@ -292,8 +301,13 @@ export const SearchInterface: React.FC<SearchInterfaceProps> = ({ onResultsChang
           toast.error(message);
         }
       } finally {
-        abortRef.current = null;
-        setBusy(false);
+        // Only the run that still owns the slot may release it. A newer run has
+        // already claimed `abortRef`, and clearing it here would strand its Stop
+        // button while it is still streaming.
+        if (runId === runIdRef.current) {
+          abortRef.current = null;
+          setBusy(false);
+        }
       }
     },
     [setChatMode, provider]
@@ -358,14 +372,23 @@ export const SearchInterface: React.FC<SearchInterfaceProps> = ({ onResultsChang
     (index: number) => {
       const turn = turns[index];
       if (!turn) return;
+      /*
+       * `truncateAt` indexes the *flat* message list, but `index` indexes the
+       * paired `turns`. Passing the turn index straight through truncated at
+       * the wrong place — regenerating turn 1 cut the list to `[u0]`, deleting
+       * turn 0's answer and orphaning its prompt, which the LLM client then
+       * merged into this prompt so the model answered two questions at once.
+       * Resolve the prompt's real position instead.
+       */
+      const messageIndex = messages.findIndex((message) => message.id === turn.prompt.id);
       void runRequest({
         prompt: turn.prompt.text,
         requestType: turn.reply?.requestType ?? turn.prompt.requestType ?? modeId,
         attachments: turn.prompt.attachments ?? [],
-        truncateAt: index,
+        truncateAt: messageIndex === -1 ? undefined : messageIndex,
       });
     },
-    [modeId, runRequest, turns]
+    [messages, modeId, runRequest, turns]
   );
 
   const copyTurn = React.useCallback(async (message: ChatMessage) => {
@@ -635,6 +658,7 @@ export const SearchInterface: React.FC<SearchInterfaceProps> = ({ onResultsChang
         >
           <ChatScrollArea
             followKey={[messages.length, messages[messages.length - 1]?.text, chatMode]}
+            transcriptKey={session?.id ?? "none"}
             header={
               chatMode ? (
                 <div className="sticky top-0 z-20 flex items-center gap-2 border-b border-hairline bg-canvas/90 px-3 py-2.5 backdrop-blur lg:hidden">

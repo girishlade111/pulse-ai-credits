@@ -132,6 +132,9 @@ export const loadSessions = async (): Promise<ChatSession[]> => {
   return rows;
 };
 
+/** Ids of the last full write, so a subsequent write can prune what it dropped. */
+let persistedIds: Set<string> | null = null;
+
 /** Writes many sessions in one transaction — a single burst per render. */
 export const saveSessions = async (sessions: ChatSession[]): Promise<void> => {
   if (usingMemory) {
@@ -144,6 +147,17 @@ export const saveSessions = async (sessions: ChatSession[]): Promise<void> => {
     sessions.forEach((session) => memory.set(session.id, session));
     return;
   }
+
+  const nextIds = new Set(sessions.map((session) => session.id));
+  /*
+   * Anything the store no longer holds has to be deleted here. The store caps
+   * the list at MAX_SESSIONS and drops the rest, but `put` alone never removes
+   * a record — so a session evicted by the cap, or one already removed from the
+   * in-memory list, stayed in the store and reappeared on the next load. The
+   * history grew past the cap no matter how many chats were deleted.
+   */
+  const stale = persistedIds ? [...persistedIds].filter((id) => !nextIds.has(id)) : [];
+  persistedIds = nextIds;
 
   await new Promise<void>((resolve) => {
     let transaction: IDBTransaction;
@@ -159,6 +173,13 @@ export const saveSessions = async (sessions: ChatSession[]): Promise<void> => {
         store.put(session);
       } catch {
         // A single unserialisable session must not sink the whole write.
+      }
+    });
+    stale.forEach((id) => {
+      try {
+        store.delete(id);
+      } catch {
+        // Same: one bad record must not block the rest of the prune.
       }
     });
     transaction.oncomplete = () => resolve();

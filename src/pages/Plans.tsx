@@ -35,16 +35,24 @@ const Plans: React.FC = () => {
     "monthly"
   );
   const [switchingPeriod, setSwitchingPeriod] = useState(false);
+  const switchTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     fetchPlansAndPackages();
+  }, []);
 
-    // Add keyboard shortcut for billing period toggle
+  // Keyboard shortcut for the billing period toggle.
+  //
+  // Registered separately from the initial load and keyed on `billingPeriod`.
+  // Inside a `[]`-dep effect the handler closed over the first render's
+  // `billingPeriod` ("monthly") forever, so Ctrl+B flipped monthly → annual once
+  // and then recomputed "annual" on every later press — permanently dead.
+  useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {
       if (e.ctrlKey && e.key === "b") {
         e.preventDefault();
-        handleBillingPeriodChange(
-          billingPeriod === "monthly" ? "annual" : "monthly"
+        setBillingPeriod((previous) =>
+          previous === "monthly" ? "annual" : "monthly"
         );
       }
     };
@@ -58,11 +66,22 @@ const Plans: React.FC = () => {
     if (newPeriod === billingPeriod) return;
 
     setSwitchingPeriod(true);
-    setTimeout(() => {
+    // Held in a ref so a rapid double toggle cannot leave two timers racing to
+    // write `billingPeriod` out of order, and so unmount clears the pending one.
+    if (switchTimerRef.current) clearTimeout(switchTimerRef.current);
+    switchTimerRef.current = setTimeout(() => {
       setBillingPeriod(newPeriod);
       setSwitchingPeriod(false);
+      switchTimerRef.current = null;
     }, 150);
   };
+
+  React.useEffect(
+    () => () => {
+      if (switchTimerRef.current) clearTimeout(switchTimerRef.current);
+    },
+    []
+  );
 
   const fetchPlansAndPackages = async () => {
     try {

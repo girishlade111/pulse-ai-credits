@@ -65,14 +65,34 @@ export const useStreamReveal = (
   text: string,
   streaming: boolean
 ): { revealed: string; done: boolean } => {
-  const [revealed, setRevealed] = React.useState(text);
+  /*
+   * Seeded from a lazy initialiser rather than from `text`. Seeding `revealed`
+   * with the full answer while the cursor still sat at 0 left the two
+   * inconsistent: the first paint showed the entire reply, and the first
+   * animation frame then rewound to ~4% and retyped it. That flash-then-retype
+   * happened on every page reload, every session switch in the sidebar, and
+   * every "Try again" on a stopped run — the exact "it appeared all at once"
+   * behaviour this hook exists to remove.
+   *
+   * Replies too short to animate start fully painted, so the empty seed is never
+   * a visible blank frame. A long reply correctly starts empty and plays out.
+   */
+  const settlesImmediately = React.useCallback(
+    (value: string) =>
+      !value || prefersReducedMotion() || value.length < MIN_ANIMATED_CHARS,
+    []
+  );
+
+  const [revealed, setRevealed] = React.useState(() =>
+    settlesImmediately(text) ? text : ""
+  );
   /** Index into `text` currently painted. Kept in a ref: it changes per frame. */
   const cursor = React.useRef(0);
-  const [done, setDone] = React.useState(true);
+  const [done, setDone] = React.useState(() => settlesImmediately(text));
 
   // A shorter `text` means the store was rewritten (regenerate, session
   // switch). Rewind rather than slicing past the end.
-  React.useEffect(() => {
+  React.useLayoutEffect(() => {
     if (cursor.current > text.length) cursor.current = 0;
   }, [text]);
 
@@ -82,7 +102,7 @@ export const useStreamReveal = (
       return;
     }
 
-    if (prefersReducedMotion() || text.length < MIN_ANIMATED_CHARS) {
+    if (settlesImmediately(text)) {
       cursor.current = text.length;
       setRevealed(text);
       setDone(true);

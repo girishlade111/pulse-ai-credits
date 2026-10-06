@@ -32,6 +32,12 @@ interface ChatScrollAreaProps {
   fill?: boolean;
   className?: string;
   header?: React.ReactNode;
+  /**
+   * Identity of the transcript being shown. Changing it re-arms the follow
+   * behaviour — see the pinning effect below for why this cannot be inferred
+   * from `followKey` alone.
+   */
+  transcriptKey?: string;
 }
 
 export const ChatScrollArea: React.FC<ChatScrollAreaProps> = ({
@@ -40,17 +46,28 @@ export const ChatScrollArea: React.FC<ChatScrollAreaProps> = ({
   fill = true,
   className,
   header,
+  transcriptKey,
 }) => {
   const scrollRef = React.useRef<HTMLDivElement>(null);
   const pinnedRef = React.useRef(true);
+  /**
+   * Set while one of our own scrolls is in flight. A smooth scroll emits a
+   * stream of `scroll` events and the early ones are far from the bottom, so
+   * without this the first of them flipped `pinnedRef` straight back to false —
+   * undoing the jump, re-showing the button mid-animation, and letting a
+   * mid-stream `followKey` change cancel the scroll the user just asked for.
+   */
+  const programmaticRef = React.useRef(false);
   const [showJump, setShowJump] = React.useState(false);
 
   const scrollToBottom = React.useCallback((behavior: ScrollBehavior = "smooth") => {
     const el = scrollRef.current;
     if (!el) return;
-    el.scrollTo({ top: el.scrollHeight, behavior });
+    programmaticRef.current = true;
     pinnedRef.current = true;
     setShowJump(false);
+    el.scrollTo({ top: el.scrollHeight, behavior });
+    if (behavior === "auto") programmaticRef.current = false;
   }, []);
 
   // Follow the stream — but only while the reader is already at the bottom, so
@@ -62,18 +79,35 @@ export const ChatScrollArea: React.FC<ChatScrollAreaProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, followKey);
 
-  // Entering the shell always lands on the newest turn.
-  React.useEffect(() => {
-    if (!fill) return;
+  /*
+   * Re-arm the follow behaviour whenever the transcript itself is swapped, and
+   * land on the newest turn.
+   *
+   * This component stays mounted across a session switch, and `pinnedRef` was
+   * only reset on mount and on a `fill` change. Switching chats while scrolled
+   * up therefore carried `pinnedRef === false` into the new transcript: the
+   * follow effect above bailed, so the new conversation opened wherever the
+   * old one's scroll offset happened to be — mid-transcript, or clamped to the
+   * bottom in a way that read as accidental — with no jump button, because
+   * `handleScroll` never fired to raise it. The stream then never auto-scrolled
+   * either, so the reader was stranded.
+   */
+  React.useLayoutEffect(() => {
+    const el = scrollRef.current;
     pinnedRef.current = true;
+    programmaticRef.current = false;
     setShowJump(false);
-  }, [fill]);
+    if (!fill || !el) return;
+    el.scrollTop = el.scrollHeight;
+  }, [transcriptKey, fill]);
 
   const handleScroll = React.useCallback(() => {
     const el = scrollRef.current;
     if (!el) return;
     const distance = el.scrollHeight - el.scrollTop - el.clientHeight;
     const atBottom = distance < BOTTOM_THRESHOLD_PX;
+    if (atBottom) programmaticRef.current = false;
+    else if (programmaticRef.current) return;
     pinnedRef.current = atBottom;
     setShowJump(!atBottom);
   }, []);
@@ -85,12 +119,24 @@ export const ChatScrollArea: React.FC<ChatScrollAreaProps> = ({
         fill ? "relative flex min-h-0 flex-1 flex-col" : "block"
       )}
     >
+      {/*
+       * `tabIndex` + `role="log"` make the transcript reachable and announced.
+       * `app-scroll` is a scrollable region, so without them a keyboard-only
+       * reader could not scroll the conversation with arrow keys or PageDown,
+       * and a screen reader heard nothing as the answer streamed in.
+       */}
       <div
         ref={scrollRef}
         onScroll={handleScroll}
+        tabIndex={fill ? 0 : undefined}
+        role={fill ? "log" : undefined}
+        aria-live={fill ? "polite" : undefined}
+        aria-relevant={fill ? "additions text" : undefined}
+        aria-label={fill ? "Conversation" : undefined}
         className={cn(
           "scroll-quiet",
           fill ? "app-scroll" : "overflow-visible",
+          fill && "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
           className
         )}
       >

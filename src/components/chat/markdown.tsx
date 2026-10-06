@@ -28,9 +28,17 @@ const isSafeHref = (href: string): boolean => {
 
 type Inline = React.ReactNode;
 
-/** Matches the inline constructs we support, longest-first. */
+/**
+ * Matches the inline constructs we support, longest-first.
+ *
+ * The `_` alternatives require non-word boundaries on both sides. Underscore is
+ * a word character, so without them the pattern fired *inside* identifiers:
+ * `my_variable_name` split into "my" + `_variable_` + "name" and rendered as
+ * three italicised fragments instead of one literal — in a workspace whose
+ * whole subject is code, that mangled nearly every identifier in every answer.
+ */
 const INLINE_PATTERN =
-  /(`[^`]+`)|(\*\*[^*]+\*\*|__[^_]+__)|(~~[^~]+~~)|(\*[^*\n]+\*|_[^_\n]+_)|(\[[^\]]+\]\([^)\s]+\))/g;
+  /(`[^`]+`)|(\*\*[^*]+\*\*|(?<![\w])__[^_]+__(?![\w]))|(~~[^~]+~~)|(\*[^*\n]+\*|(?<![\w])_[^_\n]+_(?![\w]))|(\[[^\]]+\]\([^)\s]+\))/g;
 
 const renderInline = (text: string, keyPrefix: string): Inline[] =>
   text.split(INLINE_PATTERN).filter((chunk) => chunk !== undefined && chunk !== "").map((chunk, i) => {
@@ -48,9 +56,16 @@ const renderInline = (text: string, keyPrefix: string): Inline[] =>
       (chunk.startsWith("**") && chunk.endsWith("**")) ||
       (chunk.startsWith("__") && chunk.endsWith("__"))
     ) {
+      /*
+       * Recurse into the emphasis body. `renderInline` is not a single pass: a
+       * citation written inside emphasis — `*see [the docs](https://…)*`, an
+       * extremely common model output shape — matched the italic alternative
+       * whole, so the link alternative was never retried on the inner text and
+       * the URL was shown as a literal, unclickable `[docs](https://…)`.
+       */
       return (
         <strong key={key} className="font-semibold text-ink">
-          {chunk.slice(2, -2)}
+          {renderInline(chunk.slice(2, -2), `${key}-b`)}
         </strong>
       );
     }
@@ -58,7 +73,7 @@ const renderInline = (text: string, keyPrefix: string): Inline[] =>
     if (chunk.startsWith("~~") && chunk.endsWith("~~")) {
       return (
         <s key={key} className="text-muted">
-          {chunk.slice(2, -2)}
+          {renderInline(chunk.slice(2, -2), `${key}-s`)}
         </s>
       );
     }
@@ -67,7 +82,7 @@ const renderInline = (text: string, keyPrefix: string): Inline[] =>
       (chunk.startsWith("*") && chunk.endsWith("*")) ||
       (chunk.startsWith("_") && chunk.endsWith("_"))
     ) {
-      return <em key={key}>{chunk.slice(1, -1)}</em>;
+      return <em key={key}>{renderInline(chunk.slice(1, -1), `${key}-i`)}</em>;
     }
 
     const link = /^\[([^\]]+)\]\(([^)\s]+)\)$/.exec(chunk);
@@ -137,7 +152,18 @@ const LANGUAGE_ALIASES: Record<string, string> = {
 const normalizeLanguage = (raw?: string): string | undefined => {
   const value = raw?.trim().toLowerCase();
   if (!value) return undefined;
-  return LANGUAGE_ALIASES[value] ?? value;
+  /*
+   * Own-property lookup only. A bare `LANGUAGE_ALIASES[value]` resolves through
+   * `Object.prototype`, so an untrusted fence tag from the model — ```` ```constructor ````
+   * or ```` ```__proto__ ```` — returned the `Object` function / prototype object
+   * instead of a string, which React then rejected as a child and unmounted the
+   * whole transcript. `??` does not help: `??` only falls through on nullish,
+   * and a prototype member is neither.
+   */
+  if (Object.prototype.hasOwnProperty.call(LANGUAGE_ALIASES, value)) {
+    return LANGUAGE_ALIASES[value];
+  }
+  return value;
 };
 
 /**

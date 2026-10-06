@@ -204,7 +204,11 @@ export const ChatTurn: React.FC<ChatTurnProps> = ({
               aria-busy={streaming || undefined}
             >
               {reply.text ? (
-                <ReplyBody text={reply.text} streaming={streaming} />
+                <ReplyBody
+                  text={reply.text}
+                  streaming={streaming}
+                  runKey={reply.createdAt}
+                />
               ) : (
                 <ThinkingSkeleton mode={reply.requestType} />
               )}
@@ -286,12 +290,22 @@ export const ChatTurn: React.FC<ChatTurnProps> = ({
  * timeline pills and action toolbar would all reconcile 60 times a second.
  * Only this subtree re-renders.
  */
-const ReplyBody: React.FC<{ text: string; streaming: boolean }> = ({ text, streaming }) => {
+const ReplyBody: React.FC<{ text: string; streaming: boolean; runKey: string }> = ({
+  text,
+  streaming,
+  runKey,
+}) => {
   const { revealed, done } = useStreamReveal(text, streaming);
   const [dismissed, setDismissed] = React.useState(false);
 
-  // A new run resets the "skip" affordance.
-  React.useEffect(() => setDismissed(false), [text]);
+  /*
+   * Keyed on the run, not on `text`. `text` changes on every streamed chunk, so
+   * the old dep list reset `dismissed` back to false within ~50ms of a click —
+   * "Show the rest" snapped back to the lagging slice and the button reappeared,
+   * making it unusable exactly when it was needed, since the reveal is slowest
+   * when the answer is longest.
+   */
+  React.useEffect(() => setDismissed(false), [runKey]);
 
   const shown = dismissed ? text : revealed;
   const lagging = !done && shown.length < text.length;
@@ -331,14 +345,18 @@ const TokenStat: React.FC<{ liveText: string; tokens?: ChatTokens }> = ({
   tokens,
 }) => {
   const reported = tokens?.completionTokens;
+  const hasReported = reported !== undefined;
   const shown = reported ?? estimateTokens(liveText);
-  const source = reported ? "reported" : "estimated";
+  // `reported` itself is not a valid test: a legitimately empty reply reports
+  // 0 tokens, and truthiness labelled that "estimated", which is a lie about a
+  // figure the provider did send.
+  const source = hasReported ? "reported" : "estimated";
 
   return (
     <span
       className="caption flex items-center gap-1.5 text-muted-soft"
       title={
-        reported
+        hasReported
           ? `${shown} tokens in this reply, as reported by the provider`
           : `${shown} tokens, estimated from the reply length`
       }
@@ -346,7 +364,7 @@ const TokenStat: React.FC<{ liveText: string; tokens?: ChatTokens }> = ({
       <Gauge aria-hidden />
       <span aria-live="polite">{shown.toLocaleString()}</span>
       <span>{shown === 1 ? "token" : "tokens"}</span>
-      {!reported && <span className="caption-upper">est.</span>}
+      {!hasReported && <span className="caption-upper">est.</span>}
       {source === "reported" && <span className="sr-only">reported by the provider</span>}
     </span>
   );
@@ -436,6 +454,15 @@ const ThinkingSkeleton: React.FC<{ mode?: string }> = ({ mode }) => {
     return () => clearInterval(timer);
   }, [stages.length]);
 
+  /*
+   * Clamped to the last stage we ever light up. The interval cycles against
+   * `stages.length - 1`, but the effect only depends on the length, so a `step`
+   * carried over from a longer mode (e.g. 3, from a five-stage mode) could sit
+   * past the end of a shorter list — and then `index === step` matched nothing
+   * while `index > step` was false for every index, leaving no stage lit at all.
+   */
+  const active = Math.min(step, Math.max(0, stages.length - 2));
+
   return (
     <div className="space-y-3" aria-live="polite" aria-busy="true">
       <div className="flex flex-wrap items-center gap-1.5">
@@ -443,7 +470,7 @@ const ThinkingSkeleton: React.FC<{ mode?: string }> = ({ mode }) => {
           <TimelinePill
             key={stage}
             stage={stage}
-            className={cn(index === step && "stage-active", index > step && "opacity-40")}
+            className={cn(index === active && "stage-active", index > active && "opacity-40")}
           />
         ))}
       </div>

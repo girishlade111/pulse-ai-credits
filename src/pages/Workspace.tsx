@@ -18,13 +18,22 @@ interface WorkspaceProps {
 const Workspace: React.FC<WorkspaceProps> = ({ onChatModeChange }) => {
   // Stable identity: SearchInterface reports chat mode from an effect, and a
   // fresh function every render would re-fire that effect on every keystroke.
-  const handleResultsChange = useCallback((hasResults: boolean) => {
-    setChatOpen((previous) => {
-      if (previous === hasResults) return previous;
+  const handleResultsChange = useCallback(
+    (hasResults: boolean) => {
+      /*
+       * Both setters are called directly rather than from inside a `setState`
+       * updater. Updaters must be pure: React double-invokes them in StrictMode,
+       * so `onChatModeChange` fired twice per transition, and when React
+       * replayed the updater during render it updated `App` while rendering
+       * `Workspace` — a cross-component render-phase update, which React
+       * rejects and which could land the navbar toggle out of order.
+       * `setChatOpen` already bails out when the value is unchanged.
+       */
+      setChatOpen(hasResults);
       onChatModeChange?.(hasResults);
-      return hasResults;
-    });
-  }, [onChatModeChange]);
+    },
+    [onChatModeChange]
+  );
 
   const [chatOpen, setChatOpen] = useState(false);
 

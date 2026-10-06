@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
+import React, { createContext, useContext, useEffect, useLayoutEffect, useMemo, useState } from "react";
 
 /**
  * Workspace preferences.
@@ -47,11 +47,31 @@ const read = (): { readingSize: ReadingSize } => {
 
 const PreferencesContext = createContext<Preferences | undefined>(undefined);
 
+const READING_CLASSES = ["font-small", "font-medium", "font-large", "font-extra-large"];
+
 export const PreferencesProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [readingSize, setReadingSizeState] = useState<ReadingSize>(() => read().readingSize);
 
+  /*
+   * Toggles the single reading-size class instead of assigning `body.className`.
+   * The assignment form replaced the whole attribute, so anything else on
+   * `<body>` — a scroll lock, a theme class, a class any dependency adds — was
+   * silently deleted the next time the reading size changed.
+   *
+   * `useLayoutEffect` so the stored size is applied before the first paint;
+   * as a passive effect a reload at `extra-large` rendered one frame at the
+   * default size and then reflowed.
+   */
+  useLayoutEffect(() => {
+    const { classList } = document.body;
+    const next = `font-${readingSize}`;
+    if (!classList.contains(next)) {
+      READING_CLASSES.forEach((name) => classList.remove(name));
+      classList.add(next);
+    }
+  }, [readingSize]);
+
   useEffect(() => {
-    document.body.className = `font-${readingSize}`;
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify({ readingSize }));
     } catch {
