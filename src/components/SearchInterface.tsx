@@ -708,46 +708,77 @@ export const SearchInterface: React.FC<SearchInterfaceProps> = ({ onResultsChang
               )}
             >
               <ChatScrollArea
-            followKey={[messages.length, messages[messages.length - 1]?.text, chatMode]}
-            transcriptKey={session?.id ?? "none"}
-            header={
-              chatMode ? (
-                <div className="sticky top-0 z-20 flex items-center gap-2 border-b border-hairline bg-canvas/90 px-3 py-2.5 backdrop-blur lg:hidden">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setSidebarOpen(true)}
-                    aria-label="Open chat history"
-                  >
-                    <Menu />
-                  </Button>
-                  <span className="min-w-0 flex-1 truncate title-sm">
-                    {session?.title ?? "New chat"}
-                  </span>
-                </div>
-              ) : null
-            }
-          >
-            {transcript}
-          </ChatScrollArea>
+                followKey={[messages.length, messages[messages.length - 1]?.text, chatMode]}
+                transcriptKey={session?.id ?? "none"}
+                header={
+                  chatMode ? (
+                    <div className="sticky top-0 z-20 flex items-center gap-2 border-b border-hairline bg-canvas/90 px-3 py-2.5 backdrop-blur lg:hidden">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setSidebarOpen(true)}
+                        aria-label="Open chat history"
+                      >
+                        <Menu />
+                      </Button>
+                      <span className="min-w-0 flex-1 truncate title-sm">
+                        {session?.title ?? "New chat"}
+                      </span>
+                    </div>
+                  ) : null
+                }
+              >
+                {transcript}
+              </ChatScrollArea>
 
-          {chatMode ? (
-            <div className="composer shrink-0">
-              <div className="mx-auto w-full max-w-3xl px-4 py-3 sm:px-6">
-                {fileInput}
-                {composer}
-              </div>
+              {chatMode ? (
+                <div className="composer shrink-0">
+                  <div className="mx-auto w-full max-w-3xl px-4 py-3 sm:px-6">
+                    {fileInput}
+                    {composer}
+                  </div>
+                </div>
+              ) : (
+                <div className="page pb-16">
+                  <div className="mx-auto max-w-2xl">
+                    {fileInput}
+                    {composer}
+                  </div>
+                </div>
+              )}
             </div>
-          ) : (
-            <div className="page pb-16">
-              <div className="mx-auto max-w-2xl">
-                {fileInput}
-                {composer}
-              </div>
-            </div>
-          )}
-        </div>
+          </ResizablePanel>
+
+          {/*
+            The drag handle and the artifact panel, in that order. Kept mounted
+            rather than conditionally rendered: `react-resizable-panels`
+            computes every panel's size from the set of registered panels, so
+            adding and removing one re-flows the group and can land the chat
+            panel at an arbitrary width. Hiding with CSS below `lg` keeps the
+            registration stable across a viewport change.
+
+            `collapsible` is off on purpose. It gives the reader a second, less
+            discoverable way to dismiss the panel, and the viewer's own close
+            button already does it explicitly.
+          */}
+          <ResizableHandle order={2} className="hidden lg:flex" />
+          <ResizablePanel order={3} minSize={24} defaultSize={38} className="hidden lg:block">
+            {artifact ? (
+              <ChatArtifactViewer artifact={artifact} onClose={() => setArtifact(null)} />
+            ) : null}
+          </ResizablePanel>
+        </ResizablePanelGroup>
       </div>
+
+      {/*
+        Below `lg` the panel is CSS-hidden, so the artifact opens as an overlay
+        instead. Same component, same props — only the frame differs.
+      */}
+      {artifact && isMobile && (
+        <div className="fixed inset-0 z-50 flex flex-col bg-canvas lg:hidden">
+          <ChatArtifactViewer artifact={artifact} onClose={() => setArtifact(null)} />
+        </div>
+      )}
 
       {/* desktop: reopen the collapsed sidebar */}
       {chatMode && sidebarCollapsed && (
