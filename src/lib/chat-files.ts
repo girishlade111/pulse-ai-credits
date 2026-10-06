@@ -282,7 +282,10 @@ export const fileToAttachment = async (
       attachment.content = await extractPdfText(await file.arrayBuffer());
     } catch {
       attachment.error = "This PDF could not be read in the browser.";
+      attachment.reading = false;
+      return attachment;
     }
+    attachment.meta = { ...countText(attachment.content), pages: countPdfPages(attachment.content) };
     attachment.reading = false;
     return attachment;
   }
@@ -298,11 +301,33 @@ export const fileToAttachment = async (
       attachment.content = await file.text();
     } catch {
       attachment.error = "Could not read the file.";
+      attachment.reading = false;
+      return attachment;
     }
+
+    if (isTabular(file.name)) {
+      const summary = summarizeTabular(attachment.content, file.name);
+      attachment.meta = {
+        ...countText(attachment.content),
+        columns: summary.columns,
+        rows: summary.rows,
+        preview: summary.preview,
+      };
+    } else {
+      attachment.meta = countText(attachment.content);
+    }
+  } else {
+    attachment.meta = { characters: 0 };
   }
 
   attachment.reading = false;
   return attachment;
+};
+
+/** Page markers the PDF extractor writes, used to report a page count. */
+const countPdfPages = (text: string): number | undefined => {
+  const markers = text.match(/--- page \d+ ---/g);
+  return markers?.length ? markers.length : undefined;
 };
 
 export const revokeAttachments = (attachments: ChatAttachment[]): void => {
@@ -322,6 +347,7 @@ export const formatFileSize = (bytes: number): string => {
 export const fileTypeLabel = (file: ChatAttachment): string => {
   const name = file.name;
   if (isImage(file.type)) return "Image";
+  if (/\.tsv$/i.test(name)) return "TSV";
   if (file.type.includes("pdf")) return "PDF";
   if (/\.tsx?$/i.test(name)) return "TypeScript";
   if (/\.jsx?$/i.test(name)) return "JavaScript";
