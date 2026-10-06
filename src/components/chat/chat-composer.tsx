@@ -244,7 +244,9 @@ export const ChatComposer: React.FC<ChatComposerProps> = ({
           ref={textareaRef}
           rows={1}
           value={value}
-          placeholder={mode.placeholder}
+          placeholder={
+            speech.listening || speech.starting ? "Listening…" : mode.placeholder
+          }
           aria-label="Message Pulse agent"
           onChange={(event) => onChange(event.target.value)}
           onKeyDown={(event) => {
