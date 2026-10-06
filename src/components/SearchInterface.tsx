@@ -798,7 +798,7 @@ export const SearchInterface: React.FC<SearchInterfaceProps> = ({ onResultsChang
           History
         </button>
       )}
-    </>
+    </ArtifactProvider>
   );
 };
 
