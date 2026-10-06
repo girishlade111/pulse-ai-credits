@@ -21,6 +21,28 @@ export type ChatRole = "user" | "assistant";
  */
 export type ChatMessageStatus = "complete" | "streaming" | "error";
 
+/**
+ * What the parser learned about an attachment.
+ *
+ * Folded into the prompt as context ("this CSV has 4 columns and 812 rows")
+ * because a model asked to analyse a spreadsheet has no way to know it was
+ * given one, or how big it is. Kept as structured data rather than as prose so
+ * the composer chip can render a row/column preview without re-parsing.
+ */
+export interface ChatFileMeta {
+  /** Characters of text extracted (or of the raw text for an unread file). */
+  characters?: number;
+  lines?: number;
+  /** Column headers, for tabular files only. */
+  columns?: string[];
+  /** Data rows, excluding the header. Tabular files only. */
+  rows?: number;
+  /** PDF page count, or `undefined` when the file is not paginated. */
+  pages?: number;
+  /** First rows of a tabular file, already truncated for display. */
+  preview?: string[];
+}
+
 export interface ChatAttachment {
   id: string;
   name: string;
@@ -39,6 +61,8 @@ export interface ChatAttachment {
   error?: string;
   /** True once a PDF has been parsed, so the composer can show a spinner. */
   reading?: boolean;
+  /** Structural facts about the file, produced while parsing. */
+  meta?: ChatFileMeta;
 }
 
 export interface ChatMessage {
