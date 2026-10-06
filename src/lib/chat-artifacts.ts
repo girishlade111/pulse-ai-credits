@@ -13,15 +13,21 @@
  * what "Download file" hands you.
  */
 
-export type ArtifactKind = "html" | "svg" | "javascript" | "mermaid";
+/**
+ * What kind of view a block gets.
+ *
+ * The four executable kinds render a live preview. `"code"` covers blocks that
+ * are worth opening in the viewer but cannot run in a browser — TypeScript and
+ * JSX — so they are opened on the Code tab rather than refused outright.
+ */
+export type ArtifactKind = "html" | "svg" | "javascript" | "mermaid" | "code";
 
 /**
- * Fence tags that map to a runnable artifact.
+ * Fence tags that map to an executable artifact.
  *
  * Deliberately narrow: `typescript` and `jsx` are excluded because neither
  * compiles in a browser, and offering a "Run" button that always throws is
- * worse than not offering one. The viewer still opens them for *reading*, so
- * nothing is lost.
+ * worse than not offering one. They are still viewable — see `VIEW_ONLY`.
  */
 const RUNNABLE: Record<string, ArtifactKind> = {
   html: "html",
@@ -30,32 +36,50 @@ const RUNNABLE: Record<string, ArtifactKind> = {
   mermaid: "mermaid",
 };
 
+/**
+ * Languages the viewer can open but not execute.
+ *
+ * They need a kind like every other artifact, so they map to `"code"`. Without
+ * this they resolved to `undefined` and the open handler bailed out — the
+ * button rendered, did nothing on click, and looked broken.
+ */
+const VIEW_ONLY: Record<string, ArtifactKind> = {
+  typescript: "code",
+  jsx: "code",
+};
+
 /** Mermaid is not a dependency, so it is fetched on demand from a CDN. */
 const MERMAID_URL = "https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.esm.min.mjs";
 
 /** True when the language has a live preview at all, runnable or not. */
-export const isViewableArtifact = (language?: string): boolean => {
-  if (!language) return false;
-  return language === "typescript" || language === "jsx" || hasKind(language);
-};
+export const isViewableArtifact = (language?: string): boolean =>
+  artifactKind(language) !== undefined;
 
-const hasKind = (language: string): boolean =>
-  Object.prototype.hasOwnProperty.call(RUNNABLE, language);
+const hasOwn = (table: Record<string, ArtifactKind>, key: string): boolean =>
+  Object.prototype.hasOwnProperty.call(table, key);
 
-/** The preview flavour, or `undefined` when the block only has code. */
+/**
+ * The preview flavour, or `undefined` for a language with no viewer at all.
+ *
+ * Own-property lookups only, for the same reason `LANGUAGE_ALIASES` uses them
+ * in the markdown renderer: a bare `table[key]` on an untrusted fence tag
+ * resolves through `Object.prototype` and hands back a prototype member.
+ */
 export const artifactKind = (language?: string): ArtifactKind | undefined => {
   if (!language) return undefined;
-  return hasKind(language) ? RUNNABLE[language] : undefined;
+  if (hasOwn(RUNNABLE, language)) return RUNNABLE[language];
+  if (hasOwn(VIEW_ONLY, language)) return VIEW_ONLY[language];
+  return undefined;
 };
 
 /**
- * Whether the block can actually *run*, as opposed to being viewable.
+ * Whether the block can actually *run*, as opposed to being view-only.
  *
- * Drives the button copy: "Run live preview" for something executable,
- * "Open in artifact viewer" for TypeScript or JSX, which can only be read.
+ * Drives the button copy: "Run" for something executable, "Open" for TypeScript
+ * or JSX, which the viewer shows but cannot execute.
  */
 export const isRunnableArtifact = (language?: string): boolean =>
-  artifactKind(language) !== undefined;
+  hasOwn(RUNNABLE, language ?? "");
 
 /** Short label for the viewer chrome. */
 export const artifactLabel = (language?: string): string => {
@@ -80,7 +104,7 @@ export const artifactLabel = (language?: string): string => {
  * one reply do not both become `artifact.html`.
  */
 export const artifactFileName = (kind: ArtifactKind, code: string): string => {
-  const extension = kind === "javascript" ? "js" : kind;
+  const extension = kind === "javascript" ? "js" : kind === "code" ? "txt" : kind;
   const slug = (code.match(/<h[12][^>]*>([^<]{3,40})<\/h[12]>/i)?.[1] ?? "")
     .replace(/[^\w -]+/g, "")
     .trim()
@@ -253,8 +277,13 @@ export const buildArtifactDocument = (kind: ArtifactKind, code: string): string 
       );
     case "mermaid":
       return shell(mermaidStage(source), "#ffffff");
+    case "code":
+      // Never rendered: the viewer opens these on the Code tab. A plain escaped
+      // document rather than a throw, so a stale or hand-built payload still
+      // shows its source instead of a blank frame.
+      return shell(`<pre>${escapeAttr(source)}</pre>`, "#fafaf7");
     default:
-      return shell(`<pre>${escapeAttr(source)}</pre>`, "#ffffff");
+      return shell(`<pre>${escapeAttr(source)}</pre>`, "#fafaf7");
   }
 };
 

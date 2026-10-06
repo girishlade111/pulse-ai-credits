@@ -70,6 +70,15 @@ interface ArtifactViewerProps {
 }
 
 /**
+ * Identity of the artifact on show.
+ *
+ * Keyed on the source rather than on the object, because `openArtifact` hands
+ * over a fresh object every time and an identity key would never match.
+ */
+const artifactKey = (artifact: ArtifactPayload): string =>
+  `${artifact.kind}:${artifact.language}:${artifact.code.length}:${artifact.code}`;
+
+/**
  * The preview document.
  *
  * Memoised on the source, not rebuilt per render: a keystroke in the composer
@@ -118,10 +127,34 @@ export const ChatArtifactViewer: React.FC<ArtifactViewerProps> = ({
   className,
 }) => {
   const doc = useArtifactDoc(artifact);
-  const [tab, setTab] = React.useState<"preview" | "code">(isRunnableArtifact(artifact.language)
-    ? "preview"
-    : "code");
-  const [fullscreen, setFullscreen] = React.useState(false);
+  /*
+   * Keyed on the artifact, so opening a different block resets the tab. Without
+   * the key, an HTML block opened on Preview then a TypeScript block would
+   * inherit "Preview" from state that outlives the artifact — and show a
+   * TypeScript block in a frame instead of on the Code tab.
+   */
+  const [state, setState] = React.useState<{
+    key: string;
+    tab: "preview" | "code";
+    fullscreen: boolean;
+  }>(() => ({
+    key: artifactKey(artifact),
+    tab: isRunnableArtifact(artifact.language) ? "preview" : "code",
+    fullscreen: false,
+  }));
+
+  const key = artifactKey(artifact);
+  if (state.key !== key) {
+    setState({
+      key,
+      tab: isRunnableArtifact(artifact.language) ? "preview" : "code",
+      fullscreen: false,
+    });
+  }
+
+  const { tab, fullscreen } = state;
+  const setTab = (next: "preview" | "code") => setState((prev) => ({ ...prev, tab: next }));
+  const setFullscreen = (next: boolean) => setState((prev) => ({ ...prev, fullscreen: next }));
 
   // Escape leaves fullscreen, so a fullscreen preview is never a dead end.
   React.useEffect(() => {
@@ -180,7 +213,7 @@ export const ChatArtifactViewer: React.FC<ArtifactViewerProps> = ({
           variant="ghost"
           size="icon"
           className="h-8 w-8"
-          onClick={() => setFullscreen((value) => !value)}
+          onClick={() => setFullscreen(!fullscreen)}
           aria-label={fullscreen ? "Exit fullscreen preview" : "Fullscreen preview"}
           title={fullscreen ? "Exit fullscreen" : "Fullscreen"}
         >
