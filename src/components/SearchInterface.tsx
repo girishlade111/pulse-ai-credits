@@ -60,7 +60,6 @@ import {
 } from "@/lib/chat-store";
 import { uid, type ChatAttachment, type ChatMessage } from "@/lib/chat-types";
 import { cn } from "@/lib/utils";
-import { useIsMobile } from "@/hooks/use-mobile";
 import { Menu, PanelLeftOpen } from "lucide-react";
 
 export interface SearchInterfaceProps {
@@ -162,7 +161,6 @@ export const SearchInterface: React.FC<SearchInterfaceProps> = ({ onResultsChang
   const session = store.active;
   const messages = React.useMemo(() => store.active?.messages ?? [], [store.active]);
   const mode = getMode(modeId);
-  const isMobile = useIsMobile();
 
   /* ------------------------------------------------------------- shell wiring */
 
@@ -757,23 +755,24 @@ export const SearchInterface: React.FC<SearchInterfaceProps> = ({ onResultsChang
           </ResizablePanel>
 
           {/*
-            The drag handle and the artifact panel, in that order. Kept mounted
-            rather than conditionally rendered: `react-resizable-panels`
-            computes every panel's size from the set of registered panels, so
-            adding and removing one re-flows the group and can land the chat
-            panel at an arbitrary width. Hiding with CSS below `lg` keeps the
-            registration stable across a viewport change.
+            The drag handle and the artifact panel, in that order. Both stay
+            mounted rather than being conditionally rendered:
+            `react-resizable-panels` sizes every panel from the set of registered
+            panels, so adding and removing one re-flows the group and can land
+            the transcript at an arbitrary width. They are hidden with CSS
+            instead — always hidden while there is no artifact, and below `lg`
+            where the split would squeeze the transcript unreadably narrow.
 
-            `collapsible` is off on purpose. It gives the reader a second, less
+            `collapsible` is off on purpose. It offers a second, less
             discoverable way to dismiss the panel, and the viewer's own close
             button already does it explicitly.
           */}
-          <ResizableHandle className="hidden lg:flex" />
+          <ResizableHandle className={artifact ? "hidden lg:flex" : "hidden"} />
           <ResizablePanel
             id="artifact"
             minSize={24}
             defaultSize={38}
-            className="hidden lg:block"
+            className={artifact ? "hidden lg:block" : "hidden"}
           >
             {artifact ? (
               <ChatArtifactViewer artifact={artifact} onClose={() => setArtifact(null)} />
@@ -783,10 +782,13 @@ export const SearchInterface: React.FC<SearchInterfaceProps> = ({ onResultsChang
       </div>
 
       {/*
-        Below `lg` the panel is CSS-hidden, so the artifact opens as an overlay
-        instead. Same component, same props — only the frame differs.
+        Below `lg` the split panel is CSS-hidden, so the same viewer opens as a
+        full-screen overlay instead. Kept in CSS rather than in a JS breakpoint
+        check so it cannot disagree with the panel's own `lg:` classes — two
+        sources of truth for one breakpoint is how a preview ends up rendering
+        twice on a tablet.
       */}
-      {artifact && isMobile && (
+      {artifact && (
         <div className="fixed inset-0 z-50 flex flex-col bg-canvas lg:hidden">
           <ChatArtifactViewer artifact={artifact} onClose={() => setArtifact(null)} />
         </div>
