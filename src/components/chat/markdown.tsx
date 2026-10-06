@@ -13,7 +13,7 @@
 
 import React from "react";
 import { toast } from "sonner";
-import { Check, Copy } from "lucide-react";
+import { Check, Code2, Copy, Play } from "lucide-react";
 import { copyText } from "@/lib/clipboard";
 import { cn } from "@/lib/utils";
 import { isRunnableArtifact, isViewableArtifact, artifactKind } from "@/lib/chat-artifacts";
