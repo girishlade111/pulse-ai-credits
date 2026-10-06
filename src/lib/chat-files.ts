@@ -47,16 +47,21 @@ const ALLOWED_MIME = new Set([
   "text/x-c++src",
 ]);
 
-const ALLOWED_EXTENSION = /\.(txt|md|js|ts|tsx|jsx|py|java|cpp|h|html|css|json|xml|csv|yml|yaml|sql|sh)$/i;
+const ALLOWED_EXTENSION =
+  /\.(txt|md|js|ts|tsx|jsx|py|java|cpp|h|html|css|json|xml|csv|tsv|yml|yaml|sql|sh)$/i;
 
 const CODE_EXTENSIONS = /\.(js|ts|tsx|jsx|mjs|cjs|py|java|cpp|c|h|go|rs|rb|php|sh|sql)$/i;
 
 /** Office documents a browser can decode as a zip of XML. */
 const RICH_DOC = /\.(docx|pptx|xlsx|odt|ods)$/i;
 
+/** Delimiter-separated data. CSV and TSV are the same problem, different byte. */
+const TABULAR = /\.(csv|tsv)$/i;
+
 export const isImage = (type: string): boolean => type.startsWith("image/");
 export const isPdf = (type: string, name = ""): boolean =>
   type === "application/pdf" || /\.pdf$/i.test(name);
+export const isTabular = (name: string): boolean => TABULAR.test(name);
 
 export const validateFile = (file: File): string | null => {
   if (file.size > MAX_FILE_SIZE) return "File size too large. Maximum size is 10MB.";
@@ -135,6 +140,107 @@ export const extractPdfText = async (data: ArrayBuffer): Promise<string> => {
   await doc.destroy();
   return pages.join("\n\n");
 };
+
+/* -------------------------------------------------------------- tabular data */
+
+/**
+ * One delimiter-separated record, respecting quoted fields.
+ *
+ * A naive `split(",")` breaks on `"Smith, Ada"` — a quoted comma inside a field
+ * — and every column after it shifts by one. Since the point of parsing a CSV
+ * here is to tell the model what the columns actually are, a shifted column
+ * list would feed it confidently wrong data.
+ */
+const splitDelimited = (line: string, delimiter: string): string[] => {
+  const fields: string[] = [];
+  let current = "";
+  let quoted = false;
+
+  for (let i = 0; i < line.length; i += 1) {
+    const char = line[i];
+    if (quoted) {
+      if (char === '"') {
+        // A doubled quote inside a quoted field is a literal quote.
+        if (line[i + 1] === '"') {
+          current += '"';
+          i += 1;
+        } else {
+          quoted = false;
+        }
+      } else {
+        current += char;
+      }
+      continue;
+    }
+    if (char === '"') {
+      quoted = true;
+      continue;
+    }
+    if (char === delimiter) {
+      fields.push(current);
+      current = "";
+      continue;
+    }
+    current += char;
+  }
+
+  fields.push(current);
+  return fields.map((field) => field.trim());
+};
+
+/**
+ * Sniffs the delimiter rather than trusting the extension.
+ *
+ * Exports of the same data arrive as both `.csv` and `.tsv`, and a `.csv` with
+ * semicolon separators is common outside the US. Counting occurrences in the
+ * header line is right often enough that guessing beats assuming a comma.
+ */
+const sniffDelimiter = (headerLine: string, fallback: string): string => {
+  const candidates = [",", "\t", ";", "|"];
+  let best = fallback;
+  let bestCount = 0;
+  for (const candidate of candidates) {
+    const count = splitDelimited(headerLine, candidate).length;
+    if (count > bestCount) {
+      bestCount = count;
+      best = candidate;
+    }
+  }
+  return best;
+};
+
+interface TabularSummary {
+  columns: string[];
+  rows: number;
+  preview: string[];
+}
+
+/**
+ * Reads the header and counts the rows of a delimited file.
+ *
+ * The body is truncated before this runs, so `rows` is a count within the
+ * excerpt rather than the whole file. It is labelled as such in the prompt
+ * instead of being presented as a total, because a model that says "this file
+ * has 200 rows" when it has 40,000 is a small lie with a long tail.
+ */
+const summarizeTabular = (text: string, name: string): TabularSummary => {
+  const lines = text.split(/\r\n|\n|\r/).filter((line) => line.trim());
+  if (!lines.length) return { columns: [], rows: 0, preview: [] };
+
+  const delimiter = sniffDelimiter(lines[0], /\.tsv$/i.test(name) ? "\t" : ",");
+  const columns = splitDelimited(lines[0], delimiter).map((column, index) =>
+    column || `column ${index + 1}`
+  );
+  const preview = lines.slice(1, 4).map((line) => splitDelimited(line, delimiter).join(", "));
+
+  return { columns: columns.slice(0, 40), rows: Math.max(0, lines.length - 1), preview };
+};
+
+/** Character and line counts, shared by every text path. */
+const countText = (text: string): { characters: number; lines: number } => ({
+  characters: text.length,
+  lines: text ? text.split(/\r\n|\n|\r/).length : 0,
+});
 
 const readAsDataUrl = (file: File): Promise<string> =>
   new Promise((resolve, reject) => {
