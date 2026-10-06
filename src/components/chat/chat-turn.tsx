@@ -100,6 +100,37 @@ const AttachmentList: React.FC<AttachmentListProps> = ({ attachments }) => {
 const formatTime = (iso: string): string =>
   new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 
+/** Whether a reply contains words worth reading, or only code. */
+const hasSpeakableText = (text: string): boolean => {
+  const withoutCode = text.replace(/```[\s\S]*?```/g, " ");
+  return withoutCode.replace(/[\s#*_`>[\]()|-]/g, "").length > 40;
+};
+
+/**
+ * Which attached files the reply drew on.
+ *
+ * Matches the file name, its stem, and a backticked mention. Backticks because
+ * the strongest signal a model has for "I read this file" is naming it as code
+ * or as a path — an unquoted mention in prose is far too weak to claim.
+ */
+const SourceBadges: React.FC<{ names: string[] }> = ({ names }) => (
+  <div className="mt-3 flex flex-wrap items-center gap-1.5 border-t border-hairline pt-3">
+    <span className="caption flex items-center gap-1 text-muted-soft">
+      <Quote className="h-3 w-3" aria-hidden />
+      Referenced
+    </span>
+    {names.map((name) => (
+      <span
+        key={name}
+        className="pill-badge normal-case tracking-normal"
+        title={`This reply refers to ${name}`}
+      >
+        {name}
+      </span>
+    ))}
+  </div>
+);
+
 interface ChatTurnProps {
   query: string;
   queryAt: string;
@@ -321,6 +352,11 @@ export const ChatTurn: React.FC<ChatTurnProps> = ({
                   </div>
                 </div>
               )}
+
+              {/* Speech failure is invisible otherwise: the icon only flips. */}
+              <p className="sr-only" role="status" aria-live="polite">
+                {speech.error ?? ""}
+              </p>
             </div>
           )}
         </div>
