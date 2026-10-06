@@ -166,7 +166,7 @@ export const useStreamReveal = (
     return () => {
       if (frame) cancelAnimationFrame(frame);
     };
-  }, [streaming, text]);
+  }, [streaming, text, settlesImmediately]);
 
   return { revealed, done };
 };

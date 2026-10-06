@@ -494,7 +494,10 @@ export const SearchInterface: React.FC<SearchInterfaceProps> = ({ onResultsChang
     }
 
     if (added < files.length) {
-      toast.error(`Only ${room} more file${room > 1 ? "s" : ""} can be attached.`);
+      const rejected = files.length - added;
+      toast.error(
+        `${rejected} file${rejected > 1 ? "s" : ""} could not be attached — the limit is ${MAX_FILES} per message.`
+      );
     }
   }, []);
 
