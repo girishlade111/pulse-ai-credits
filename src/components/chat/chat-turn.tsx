@@ -236,6 +236,8 @@ export const ChatTurn: React.FC<ChatTurnProps> = ({
                 <ThinkingSkeleton mode={reply.requestType} />
               )}
 
+              {sources.length > 0 && <SourceBadges names={sources} />}
+
               {!streaming && (
                 <div className="mt-5 flex flex-wrap items-center justify-between gap-2 border-t border-hairline pt-3">
                   {/* Left: what this run cost, in tokens. */}
