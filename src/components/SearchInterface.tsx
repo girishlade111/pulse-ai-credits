@@ -431,18 +431,36 @@ export const SearchInterface: React.FC<SearchInterfaceProps> = ({ onResultsChang
 
   const addFiles = React.useCallback(async (files: File[]) => {
     if (!files.length) return;
-    const room = MAX_FILES - attachmentsRef.current.length;
-    if (room <= 0) {
-      toast.error(`Up to ${MAX_FILES} files per message.`);
-      return;
-    }
+
+    /*
+     * `attachmentsRef` only refreshes on the next render, so two `addFiles`
+     * calls inside one tick — a paste and a drop together, or two rapid pastes
+     * — both computed the same `room` from the same stale length and both
+     * appended up to it, overshooting MAX_FILES. Clamp against the live state
+     * inside the updater instead, which is evaluated at commit time.
+     */
+    let queued = 0;
+    const claimSlot = (): boolean => {
+      let accepted = false;
+      setAttachments((prev) => {
+        if (prev.length + queued >= MAX_FILES) return prev;
+        accepted = true;
+        return prev;
+      });
+      if (accepted) queued += 1;
+      return accepted;
+    };
 
     let added = 0;
-    for (const file of files.slice(0, room)) {
+    for (const file of files) {
       const problem = validateFile(file);
       if (problem) {
         toast.error(`${file.name}: ${problem}`);
         continue;
+      }
+      if (!claimSlot()) {
+        toast.error(`Up to ${MAX_FILES} files per message.`);
+        break;
       }
 
       /*

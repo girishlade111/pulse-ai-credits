@@ -107,14 +107,30 @@ export const ChatComposer: React.FC<ChatComposerProps> = ({
     }
   }, []);
 
-  // Grow with the content, then scroll internally instead of pushing the page.
+  /*
+   * Grow with the content, then scroll internally instead of pushing the page.
+   *
+   * Driven by a `ResizeObserver` on the box, not just by `value`. `scrollHeight`
+   * depends on the wrap width, so a width change re-wrapped the text without
+   * re-measuring: dragging the sidebar narrower left the last lines clipped
+   * behind an internal scrollbar, and it only corrected itself on the next
+   * keystroke. The box's width changes on a sidebar drag and on a resize across
+   * the `sm:` breakpoint, with no remount and no `value` change.
+   */
   React.useLayoutEffect(() => {
     const el = textareaRef.current;
     if (!el) return;
-    el.style.height = "0px";
-    const next = Math.min(el.scrollHeight, MAX_TEXTAREA_HEIGHT);
-    el.style.height = `${next}px`;
-    el.style.overflowY = el.scrollHeight > MAX_TEXTAREA_HEIGHT ? "auto" : "hidden";
+
+    const resize = () => {
+      el.style.height = "0px";
+      el.style.height = `${Math.min(el.scrollHeight, MAX_TEXTAREA_HEIGHT)}px`;
+      el.style.overflowY = el.scrollHeight > MAX_TEXTAREA_HEIGHT ? "auto" : "hidden";
+    };
+
+    resize();
+    const observer = new ResizeObserver(resize);
+    observer.observe(el);
+    return () => observer.disconnect();
   }, [value]);
 
   React.useEffect(() => {
@@ -126,6 +142,25 @@ export const ChatComposer: React.FC<ChatComposerProps> = ({
     textareaRef.current?.focus();
   }, [focusToken]);
 
+  /*
+   * Clear the drop highlight when a drag ends anywhere, including outside the
+   * composer. `onDrop` alone never fires if the user pressed Escape mid-drag or
+   * released over another window, which left the box stuck showing its active
+   * drop-zone styling until the next drag happened to pass over it again.
+   */
+  React.useEffect(() => {
+    if (!onDropFiles) return;
+    const clear = () => onDragStateChange?.(false);
+    window.addEventListener("drop", clear);
+    window.addEventListener("dragend", clear);
+    window.addEventListener("blur", clear);
+    return () => {
+      window.removeEventListener("drop", clear);
+      window.removeEventListener("dragend", clear);
+      window.removeEventListener("blur", clear);
+    };
+  }, [onDropFiles, onDragStateChange]);
+
   const submit = () => {
     if (!canSend) return;
     onSubmit();
@@ -134,13 +169,30 @@ export const ChatComposer: React.FC<ChatComposerProps> = ({
   return (
     <div className="w-full">
       <div
-        onDragOver={(event) => {
+        onDragEnter={(event) => {
           if (!onDropFiles) return;
           event.preventDefault();
           onDragStateChange?.(true);
         }}
+        onDragOver={(event) => {
+          if (!onDropFiles) return;
+          event.preventDefault();
+          event.dataTransfer.dropEffect = "copy";
+          onDragStateChange?.(true);
+        }}
         onDragLeave={(event) => {
           if (!onDropFiles) return;
+          /*
+           * Per the HTML drag-and-drop spec, `dragleave` fires on the previous
+           * target whenever the immediate selection changes — including when the
+           * cursor moves from this box onto the textarea or a button inside it.
+           * The old handler cleared the highlight for those, and with no
+           * `dragenter` to set it again the "drop here" state blinked off as
+           * soon as the cursor entered the textarea, making the composer look
+           * like it would not accept the drop. Ignore leaves into descendants.
+           */
+          const next = event.relatedTarget;
+          if (next instanceof Node && event.currentTarget.contains(next)) return;
           event.preventDefault();
           onDragStateChange?.(false);
         }}
@@ -203,6 +255,18 @@ export const ChatComposer: React.FC<ChatComposerProps> = ({
 
           <Select
             value={provider}
+            /*
+             * Selection lives on the Root, not on each item. Radix fires an
+             * item's `onSelect` on `pointerup` anywhere inside it and never
+             * checks the pointer is still over the item — so with per-item
+             * handlers, clicking the small docs link inside a row ran that
+             * row's `onSelect` too. `stopPropagation` on `click` did not help,
+             * because `pointerup` had already fired. The effect was that opening
+             * a provider's documentation in a new tab silently switched the
+             * active provider, so the next run went somewhere the user had not
+             * chosen.
+             */
+            onValueChange={(next) => setProvider(next as ProviderId)}
             onOpenChange={(open) => {
               if (open) void refreshHealth();
             }}
@@ -243,7 +307,6 @@ export const ChatComposer: React.FC<ChatComposerProps> = ({
                   key={option.id}
                   id={option.id}
                   current={provider}
-                  onSelect={setProvider}
                   health={health[option.id]}
                 />
               ))}
@@ -348,9 +411,8 @@ const labelFor = (id: ProviderId) => PROVIDER_LIST.find((p) => p.id === id)?.lab
 const ProviderRow: React.FC<{
   id: ProviderId;
   current: ProviderId;
-  onSelect: (id: ProviderId) => void;
   health?: ProviderHealth;
-}> = ({ id, current, onSelect, health }) => {
+}> = ({ id, current, health }) => {
   const option = PROVIDER_LIST.find((p) => p.id === id);
   if (!option) return null;
 
@@ -358,11 +420,7 @@ const ProviderRow: React.FC<{
   const reason = blocked ? health?.detail || option.requires : option.note;
 
   return (
-    <SelectItem
-      value={id}
-      onSelect={() => onSelect(id)}
-      className="items-start py-2"
-    >
+    <SelectItem value={id} className="items-start py-2">
       <div className="flex w-full items-start gap-3">
         <span
           className={cn(
@@ -386,9 +444,12 @@ const ProviderRow: React.FC<{
                 href={option.docs}
                 target="_blank"
                 rel="noreferrer noopener"
+                /* Both, so the anchor neither navigates the page nor lets the
+                       surrounding row treat the press as a selection. */
+                onPointerDown={(event) => event.stopPropagation()}
                 onClick={(event) => event.stopPropagation()}
                 className="shrink-0 text-muted-soft transition-colors hover:text-ink"
-                aria-label={`${option.label} documentation`}
+                aria-label={`${option.label} documentation (opens in a new tab)`}
               >
                 <ExternalLink className="h-3 w-3" />
               </a>

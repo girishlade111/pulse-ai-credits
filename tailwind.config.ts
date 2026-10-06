@@ -1,4 +1,7 @@
 import type { Config } from "tailwindcss";
+// ESM import rather than `require`: this config is loaded as an ES module, and
+// the CJS form also trips the no-require-imports rule.
+import tailwindcssAnimate from "tailwindcss-animate";
 
 /**
  * Design tokens are declared once in src/index.css as HSL channels and mapped
