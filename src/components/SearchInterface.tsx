@@ -700,7 +700,7 @@ export const SearchInterface: React.FC<SearchInterfaceProps> = ({ onResultsChang
           className="min-w-0"
           style={{ height: chatMode ? "100%" : "auto" }}
         >
-          <ResizablePanel minSize={35} className="min-w-0" order={1}>
+          <ResizablePanel id="transcript" minSize={35} className="min-w-0">
             <div
               className={cn(
                 "min-w-0",
@@ -768,8 +768,13 @@ export const SearchInterface: React.FC<SearchInterfaceProps> = ({ onResultsChang
             discoverable way to dismiss the panel, and the viewer's own close
             button already does it explicitly.
           */}
-          <ResizableHandle order={2} className="hidden lg:flex" />
-          <ResizablePanel order={3} minSize={24} defaultSize={38} className="hidden lg:block">
+          <ResizableHandle className="hidden lg:flex" />
+          <ResizablePanel
+            id="artifact"
+            minSize={24}
+            defaultSize={38}
+            className="hidden lg:block"
+          >
             {artifact ? (
               <ChatArtifactViewer artifact={artifact} onClose={() => setArtifact(null)} />
             ) : null}
