@@ -456,7 +456,24 @@ export const ChatComposer: React.FC<ChatComposerProps> = ({
         <p className="mt-2.5 text-center caption text-muted-soft">
           <Kbd>Enter</Kbd> to send · <Kbd>Shift</Kbd>+<Kbd>Enter</Kbd> for a new line ·
           paste or drop files to attach
+          {speech.supported ? " · mic to dictate" : ""}
         </p>
+      )}
+
+      {/*
+        Dictation state lives outside the placeholder, so a permission denial is
+        still legible after the user has typed something and the placeholder is
+        gone again.
+      */}
+      <p className="sr-only" role="status" aria-live="polite">
+        {speech.listening
+          ? "Listening. Speak now."
+          : speech.starting
+            ? "Starting voice input."
+            : speech.error ?? ""}
+      </p>
+      {speech.error && (
+        <p className="mt-2 text-center caption text-destructive">{speech.error}</p>
       )}
     </div>
   );
