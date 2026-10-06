@@ -476,6 +476,12 @@
     @apply h-3 w-3;
   }
 
+  /* Dictation: an expanding ring, so "the mic is open" is legible at a glance
+     and not only from a placeholder string. */
+  .mic-pulse {
+    animation: mic-pulse 1.4s ease-out infinite;
+  }
+
   /* Streaming caret — a pseudo-element, so repainting it costs no React work. */
   .md-streaming > *:last-child::after {
     content: '';
@@ -550,6 +556,21 @@
   }
 }
 
+@keyframes mic-pulse {
+  0% {
+    opacity: 0.85;
+    transform: scale(1);
+  }
+  70% {
+    opacity: 0;
+    transform: scale(1.35);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.35);
+  }
+}
+
 @keyframes caret-blink {
   0%,
   100% {
@@ -567,6 +588,7 @@
   .fade-in-up,
   .timeline-in,
   .stage-active,
+  .mic-pulse,
   .md-streaming > *:last-child::after {
     animation: none !important;
   }
