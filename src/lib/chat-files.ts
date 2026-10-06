@@ -365,6 +365,57 @@ export const fileTypeLabel = (file: ChatAttachment): string => {
 };
 
 /**
+ * A one-line summary of what was parsed, for the prompt and the composer chip.
+ *
+ * The model has no other way to know it was handed a spreadsheet rather than
+ * prose — without this it analyses the excerpt as if it were an essay. Also
+ * used by the UI, so both surfaces describe a file identically.
+ */
+export const describeFile = (file: ChatAttachment): string => {
+  const meta = file.meta;
+  if (!meta) return fileTypeLabel(file);
+
+  const parts: string[] = [];
+  if (meta.pages) parts.push(`${meta.pages} page${meta.pages === 1 ? "" : "s"}`);
+  if (meta.columns?.length) {
+    parts.push(`${meta.columns.length} column${meta.columns.length === 1 ? "" : "s"}`);
+  }
+  if (meta.rows !== undefined) parts.push(`${meta.rows} data row${meta.rows === 1 ? "" : "s"}`);
+  if (meta.lines) parts.push(`${meta.lines} line${meta.lines === 1 ? "" : "s"}`);
+  if (meta.characters) parts.push(`${meta.characters.toLocaleString()} characters`);
+
+  return parts.length ? parts.join(" · ") : fileTypeLabel(file);
+};
+
+/** The prose the model reads about each attachment, before its contents. */
+const attachmentDescriptor = (attachment: ChatAttachment): string => {
+  const base = `${attachment.name} (${fileTypeLabel(attachment)}, ${formatFileSize(attachment.size)})`;
+  const summary = describeFile(attachment);
+  return summary === fileTypeLabel(attachment) ? base : `${base} — ${summary}`;
+};
+
+/**
+ * Which attached files a reply appears to have drawn on.
+ *
+ * A heuristic, not a citation parser: the transcript is prose and the model is
+ * not asked to tag its sources. Deliberately conservative — a bare stem match
+ * would light up "summary.md" on a reply that only happened to contain the word
+ * "summary", so it requires the name, the stem, or a backticked mention.
+ */
+export const sourceMatches = (replyText: string, names: string[]): string[] => {
+  const text = replyText.toLowerCase();
+  return names.filter((name) => {
+    const stem = name.replace(/\.[^.]+$/, "").toLowerCase();
+    if (stem.length < 3) return false;
+    return (
+      text.includes(name.toLowerCase()) ||
+      text.includes(stem) ||
+      text.includes(`\`${stem}\``)
+    );
+  });
+};
+
+/**
  * Builds the content that goes on the wire for a prompt with attachments.
  *
  * Images become real `image_url` parts so the model can see them; text and
@@ -384,7 +435,7 @@ export const buildAttachmentContent = (
   let budget = MAX_TOTAL_CONTEXT_CHARS;
 
   for (const attachment of attachments) {
-    const label = `${attachment.name} (${fileTypeLabel(attachment)}, ${formatFileSize(attachment.size)})`;
+    const label = attachmentDescriptor(attachment);
 
     if (isImage(attachment.type)) {
       if (attachment.dataUrl) {
@@ -400,6 +451,26 @@ export const buildAttachmentContent = (
       const snippet = attachment.content.slice(0, Math.min(MAX_CONTENT_CHARS, budget));
       budget -= snippet.length;
       readables.push(`- ${label}`, "", "```text", snippet, "```", "");
+
+      /*
+       * Tabular shape is stated separately from the excerpt, because a raw CSV
+       * paste does not read as a table to a model: without the header list it
+       * will happily describe column three as "the values column" when it is
+       * `revenue`. The row count is explicitly scoped to the excerpt.
+       */
+      if (attachment.meta?.columns?.length) {
+        readables.push(
+          `- Columns: ${attachment.meta.columns.join(", ")}`,
+          ...(attachment.meta.preview?.length
+            ? [`- First rows in the excerpt:`, ...attachment.meta.preview.map((row) => `  ${row}`)]
+            : []),
+          `- The excerpt below contains ${Math.min(
+            attachment.meta.rows ?? 0,
+            Math.ceil(snippet.split("\n").length)
+          )} data row(s); the full file may be longer and may be truncated.`,
+          ""
+        );
+      }
     } else {
       unreadable.push(`- ${label} — ${attachment.error ?? "contents unreadable"}.`);
     }
@@ -407,7 +478,10 @@ export const buildAttachmentContent = (
 
   const notes: string[] = [];
   if (readables.length) {
-    notes.push("The user attached these files. Their contents are below.", ...readables);
+    notes.push(
+      "The user attached these files. Cite a file by its name when you use it. Their contents are below.",
+      ...readables
+    );
   }
   if (unreadable.length) {
     notes.push(
