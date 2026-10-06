@@ -30,12 +30,14 @@ import {
   Cpu,
   ExternalLink,
   Loader2,
+  Mic,
   Paperclip,
   Send,
   Square,
   Trash2,
   X,
 } from "lucide-react";
+import { useSpeechRecognition } from "@/hooks/use-speech-recognition";
 import type { ChatAttachment } from "@/lib/chat-types";
 
 const MAX_TEXTAREA_HEIGHT = 220;
