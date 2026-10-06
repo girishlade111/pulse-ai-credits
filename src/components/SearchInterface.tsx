@@ -23,6 +23,16 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { ChatComposer } from "@/components/chat/chat-composer";
+import {
+  ArtifactProvider,
+  ChatArtifactViewer,
+  type ArtifactPayload,
+} from "@/components/chat/chat-artifact-viewer";
+import {
+  ResizableHandle,
+  ResizablePanel,
+  ResizablePanelGroup,
+} from "@/components/ui/resizable";
 import { ChatScrollArea } from "@/components/chat/chat-scroll-area";
 import { ChatSidebar } from "@/components/chat/chat-sidebar";
 import { ChatTurn } from "@/components/chat/chat-turn";
