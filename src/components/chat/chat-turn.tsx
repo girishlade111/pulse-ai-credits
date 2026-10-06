@@ -244,6 +244,28 @@ export const ChatTurn: React.FC<ChatTurnProps> = ({
                   <TokenStat liveText={reply.text} tokens={reply.tokens} />
 
                   <div className="flex flex-wrap items-center justify-end gap-1">
+                    {/*
+                      Read aloud is only offered when there is prose to read:
+                      a reply that is nothing but a code block would otherwise
+                      offer a speaker and produce silence.
+                    */}
+                    {speech.supported && hasSpeakableText(reply.text) && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => speech.toggle(reply.text)}
+                        aria-label={speech.speaking ? "Stop reading aloud" : "Read this reply aloud"}
+                        aria-pressed={speech.speaking}
+                        title={speech.speaking ? "Stop" : "Read aloud"}
+                      >
+                        {speech.speaking ? (
+                          <VolumeX className="text-primary" />
+                        ) : (
+                          <Volume2 />
+                        )}
+                      </Button>
+                    )}
                     <Button
                       variant="ghost"
                       size="sm"
