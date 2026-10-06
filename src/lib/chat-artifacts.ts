@@ -226,7 +226,7 @@ try {
 } catch (error) {
   status.textContent = "Could not render this diagram: " + (error && error.message ? error.message : error);
 }
-<\/script>`;
+</script>`;
 
 /**
  * Builds the full document for an artifact.
