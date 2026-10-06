@@ -25,7 +25,7 @@ import {
 } from "@/lib/chat-artifacts";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { Check, Code2, Copy, Download, Eye, Maximize2, Minimize2, Play, X } from "lucide-react";
+import { Check, Code2, Copy, Download, Maximize2, Minimize2, Play, X } from "lucide-react";
 
 export interface ArtifactPayload {
   kind: ArtifactKind;
@@ -33,6 +33,33 @@ export interface ArtifactPayload {
   language: string;
   code: string;
 }
+
+/**
+ * Opens a block in the workspace's artifact panel.
+ *
+ * A context rather than a prop chain because the button lives inside
+ * `markdown.tsx` — many renderers deep under the chat — and threading a
+ * callback through every level would couple the renderer to the workspace
+ * layout. The default is a no-op so `Markdown` still works standalone (the
+ * export preview, a test): the button simply does nothing rather than throwing.
+ */
+const ArtifactContext = React.createContext<((payload: ArtifactPayload) => void) | null>(null);
+
+export const ArtifactProvider: React.FC<{
+  onOpen: (payload: ArtifactPayload) => void;
+  children: React.ReactNode;
+}> = ({ onOpen, children }) => (
+  <ArtifactContext.Provider value={onOpen}>{children}</ArtifactContext.Provider>
+);
+
+/**
+ * Opens an artifact, if the surrounding app has a viewer.
+ *
+ * Returns `null` when there is no provider, so callers can hide the button
+ * entirely instead of rendering a control that does nothing.
+ */
+export const useOpenArtifact = (): ((payload: ArtifactPayload) => void) | null =>
+  React.useContext(ArtifactContext);
 
 interface ArtifactViewerProps {
   artifact: ArtifactPayload;
