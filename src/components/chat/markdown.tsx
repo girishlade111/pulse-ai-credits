@@ -16,6 +16,8 @@ import { toast } from "sonner";
 import { Check, Copy } from "lucide-react";
 import { copyText } from "@/lib/clipboard";
 import { cn } from "@/lib/utils";
+import { isRunnableArtifact, isViewableArtifact, artifactKind } from "@/lib/chat-artifacts";
+import { useOpenArtifact } from "./chat-artifact-viewer";
 
 const SAFE_PROTOCOL = /^(https?:|mailto:)/i;
 
@@ -215,6 +217,7 @@ const detectLanguage = (code: string): string => {
  */
 const CodeBlock: React.FC<{ language?: string; code: string }> = ({ language, code }) => {
   const [copied, setCopied] = React.useState(false);
+  const openArtifact = useOpenArtifact();
 
   React.useEffect(() => {
     if (!copied) return;
@@ -228,29 +231,67 @@ const CodeBlock: React.FC<{ language?: string; code: string }> = ({ language, co
     else toast.error("Could not copy the code block.");
   }, [code]);
 
+  /*
+   * Only for a language with a preview, and only when something is mounted to
+   * show it. Without the provider check the button would be present but inert
+   * in any other consumer of `Markdown`.
+   */
+  const kind = artifactKind(language);
+  const canPreview = openArtifact !== null && isViewableArtifact(language);
+  const open = React.useCallback(() => {
+    if (!openArtifact || !kind) return;
+    openArtifact({ kind, language: language ?? "html", code });
+  }, [code, kind, language, openArtifact]);
+
   return (
     <figure className="md-code-shell">
       <figcaption className="md-code-bar">
         <span className="md-code-lang">{language || "code"}</span>
-        <button
-          type="button"
-          onClick={copy}
-          className="md-copy"
-          aria-label={copied ? "Code copied to clipboard" : "Copy code block"}
-          title={copied ? "Copied" : "Copy code"}
-        >
-          {copied ? (
-            <>
-              <Check aria-hidden />
-              Copied
-            </>
-          ) : (
-            <>
-              <Copy aria-hidden />
-              Copy
-            </>
+        <span className="flex shrink-0 items-center gap-1">
+          {canPreview && (
+            <button
+              type="button"
+              onClick={open}
+              className="md-copy"
+              title={
+                isRunnableArtifact(language)
+                  ? "Run live preview"
+                  : "Open in artifact viewer"
+              }
+            >
+              {isRunnableArtifact(language) ? (
+                <>
+                  <Play aria-hidden />
+                  Run
+                </>
+              ) : (
+                <>
+                  <Code2 aria-hidden />
+                  Open
+                </>
+              )}
+            </button>
           )}
-        </button>
+          <button
+            type="button"
+            onClick={copy}
+            className="md-copy"
+            aria-label={copied ? "Code copied to clipboard" : "Copy code block"}
+            title={copied ? "Copied" : "Copy code"}
+          >
+            {copied ? (
+              <>
+                <Check aria-hidden />
+                Copied
+              </>
+            ) : (
+              <>
+                <Copy aria-hidden />
+                Copy
+              </>
+            )}
+          </button>
+        </span>
       </figcaption>
       <pre className="md-pre">
         <code className="md-code md-code-block">{code}</code>
