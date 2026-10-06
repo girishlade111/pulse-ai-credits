@@ -60,7 +60,8 @@ import {
 } from "@/lib/chat-store";
 import { uid, type ChatAttachment, type ChatMessage } from "@/lib/chat-types";
 import { cn } from "@/lib/utils";
-import { Menu, PanelRightClose, PanelLeftOpen } from "lucide-react";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { Menu, PanelLeftOpen } from "lucide-react";
 
 export interface SearchInterfaceProps {
   /**
@@ -161,6 +162,7 @@ export const SearchInterface: React.FC<SearchInterfaceProps> = ({ onResultsChang
   const session = store.active;
   const messages = React.useMemo(() => store.active?.messages ?? [], [store.active]);
   const mode = getMode(modeId);
+  const isMobile = useIsMobile();
 
   /* ------------------------------------------------------------- shell wiring */
 
@@ -648,7 +650,12 @@ export const SearchInterface: React.FC<SearchInterfaceProps> = ({ onResultsChang
   );
 
   return (
-    <>
+    /*
+      The provider is what lets a code block deep inside `markdown.tsx` reach the
+      workspace panel without every renderer between them knowing about the
+      layout.
+    */
+    <ArtifactProvider onOpen={setArtifact}>
       {/*
         The composer lives in the same React position in both branches — only
         the wrapper classes change. That is deliberate: switching between the
